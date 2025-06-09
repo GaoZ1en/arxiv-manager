@@ -1,0 +1,6 @@
+/workspaces/arxiv-manager/target/debug/deps/libnative_tls-59993de29693f1e0.rmeta: /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/lib.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/imp/openssl.rs
+
+/workspaces/arxiv-manager/target/debug/deps/native_tls-59993de29693f1e0.d: /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/lib.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/imp/openssl.rs
+
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/lib.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/native-tls-0.2.14/src/imp/openssl.rs:

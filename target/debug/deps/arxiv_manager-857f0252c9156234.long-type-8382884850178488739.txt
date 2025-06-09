@@ -1,0 +1,2 @@
+Cow<'_, [_]>: From<[settings_view::Theme; 3]>
+[settings_view::Theme; 3]: Into<Cow<'_, [_]>>

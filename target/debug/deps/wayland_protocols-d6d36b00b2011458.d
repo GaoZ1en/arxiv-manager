@@ -1,0 +1,10 @@
+/workspaces/arxiv-manager/target/debug/deps/libwayland_protocols-d6d36b00b2011458.rmeta: /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/lib.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/protocol_macro.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/ext.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/wp.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xdg.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xwayland.rs
+
+/workspaces/arxiv-manager/target/debug/deps/wayland_protocols-d6d36b00b2011458.d: /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/lib.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/protocol_macro.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/ext.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/wp.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xdg.rs /home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xwayland.rs
+
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/lib.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/protocol_macro.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/ext.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/wp.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xdg.rs:
+/home/codespace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wayland-protocols-0.32.8/src/xwayland.rs:

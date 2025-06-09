@@ -1,0 +1,5 @@
+iced_widget::column::Column<'_, ui::Message, _>
+iced_widget::container::Container<'_, ui::Message, _>
+iced::widget::Column<'_, ui::Message, _>: From<iced::widget::Container<'_, ui::Message, _>>
+iced::widget::Column<'_, ui::Message, _>
+iced::widget::Container<'_, ui::Message, _>
