@@ -12,7 +12,7 @@ pub async fn search_arxiv_papers(query: String) -> Result<Vec<ArxivPaper>, Strin
     // 构建arXiv API查询URL
     let encoded_query = urlencoding::encode(&query);
     let url = format!(
-        "http://export.arxiv.org/api/query?search_query=all:{}&start=0&max_results=20&sortBy=submittedDate&sortOrder=descending",
+        "https://export.arxiv.org/api/query?search_query=all:{}&start=0&max_results=10&sortBy=submittedDate&sortOrder=descending",
         encoded_query
     );
 
@@ -64,9 +64,13 @@ fn parse_arxiv_xml(xml_content: &str) -> Result<Vec<ArxivPaper>, String> {
             // 提取ID
             if let Some(id_content) = extract_xml_content(entry_content, "id") {
                 paper.entry_url = id_content.trim().to_string();
-                paper.pdf_url = id_content.trim().replace("/abs/", "/pdf/") + ".pdf";
-                if let Some(id_start) = id_content.rfind('/') {
-                    paper.id = id_content[id_start + 1..].trim().to_string();
+                
+                // 从URL中提取arXiv ID
+                let clean_url = id_content.trim();
+                if let Some(id_part) = clean_url.split('/').last() {
+                    paper.id = id_part.to_string();
+                    // 构建标准的PDF URL
+                    paper.pdf_url = format!("https://arxiv.org/pdf/{}.pdf", paper.id);
                 }
             }
             
@@ -158,11 +162,24 @@ pub async fn download_pdf(paper: ArxivPaper) -> Result<(String, PathBuf), (Strin
     // 构建文件路径
     let file_path = downloads_dir.join(format!("{}.pdf", paper.id));
     
+    // 构建正确的PDF下载URL
+    let pdf_url = if paper.pdf_url.starts_with("http") {
+        paper.pdf_url.clone()
+    } else {
+        format!("https://arxiv.org/pdf/{}.pdf", paper.id)
+    };
+    
+    println!("正在下载PDF: {}", pdf_url);
+    
     // 下载PDF文件
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| (paper.id.clone(), format!("创建HTTP客户端失败: {}", e)))?;
+        
     let response = match client
-        .get(&paper.pdf_url)
-        .header("User-Agent", "ArxivManager/1.0")
+        .get(&pdf_url)
+        .header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
         .send()
         .await
     {
@@ -171,7 +188,7 @@ pub async fn download_pdf(paper: ArxivPaper) -> Result<(String, PathBuf), (Strin
     };
     
     if !response.status().is_success() {
-        return Err((paper.id.clone(), format!("下载失败，状态码: {}", response.status())));
+        return Err((paper.id.clone(), format!("下载失败，状态码: {} - URL: {}", response.status(), pdf_url)));
     }
     
     // 获取文件内容
@@ -180,9 +197,17 @@ pub async fn download_pdf(paper: ArxivPaper) -> Result<(String, PathBuf), (Strin
         Err(e) => return Err((paper.id.clone(), format!("读取文件内容失败: {}", e))),
     };
     
+    // 验证是否为PDF文件
+    if content.len() < 4 || &content[0..4] != b"%PDF" {
+        return Err((paper.id.clone(), "下载的文件不是有效的PDF格式".to_string()));
+    }
+    
     // 保存文件
     match fs::write(&file_path, content).await {
-        Ok(_) => Ok((paper.id, file_path)),
+        Ok(_) => {
+            println!("PDF下载成功: {:?}", file_path);
+            Ok((paper.id, file_path))
+        },
         Err(e) => Err((paper.id.clone(), format!("保存文件失败: {}", e))),
     }
 }

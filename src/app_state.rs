@@ -145,8 +145,14 @@ impl ArxivManager {
                 Task::none()
             }
             Message::OpenPaperPane(paper) => {
-                let index = self.saved_papers.len();
-                self.saved_papers.push(paper.clone());
+                // 检查论文是否已经在saved_papers中
+                let index = if let Some(existing_index) = self.saved_papers.iter().position(|p| p.id == paper.id) {
+                    existing_index
+                } else {
+                    // 如果不在，则添加
+                    self.saved_papers.push(paper.clone());
+                    self.saved_papers.len() - 1
+                };
                 
                 let pane_type = PaneType::PaperView(index);
                 let new_pane = Pane {
