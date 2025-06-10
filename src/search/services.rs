@@ -1,7 +1,7 @@
 // 外部服务和异步函数
 
 use std::path::PathBuf;
-use crate::models::{ArxivPaper, SearchConfig, DateRange};
+use crate::core::models::{ArxivPaper, SearchConfig, DateRange};
 
 // 高级搜索 arXiv 论文
 pub async fn search_arxiv_papers_advanced(config: SearchConfig) -> Result<Vec<ArxivPaper>, String> {
@@ -153,6 +153,9 @@ fn parse_arxiv_xml(xml_content: &str) -> Result<Vec<ArxivPaper>, String> {
                 categories: Vec::new(),
                 pdf_url: String::new(),
                 entry_url: String::new(),
+                doi: None,
+                journal_ref: None,
+                comments: None,
             };
             
             // 提取ID

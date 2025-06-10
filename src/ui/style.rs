@@ -3,7 +3,7 @@
 use iced::{Color, Background, Border, Shadow};
 use iced::widget::button;
 
-use crate::theme::*;
+use crate::ui::theme::*;
 
 pub fn button_primary_style(_theme: &iced::Theme, status: button::Status) -> button::Style {
     let (background, text_color) = match status {

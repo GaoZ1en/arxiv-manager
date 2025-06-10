@@ -6,11 +6,11 @@ use iced::widget::{
 };
 use iced::{Element, Length, Color, Background, Border, Shadow};
 
-use crate::app_state::ArxivManager;
-use crate::models::{ArxivPaper, DownloadItem, DownloadStatus, PaneType};
-use crate::messages::Message;
-use crate::style::{button_primary_style, button_secondary_style, button_danger_style};
-use crate::theme::*;
+use crate::core::app_state::ArxivManager;
+use crate::core::models::{ArxivPaper, DownloadItem, DownloadStatus, PaneType};
+use crate::core::messages::Message;
+use crate::ui::style::{button_primary_style, button_secondary_style, button_danger_style};
+use crate::ui::theme::*;
 
 impl ArxivManager {
     pub fn view(&self) -> Element<Message> {
@@ -225,7 +225,7 @@ impl ArxivManager {
 
     fn advanced_search_panel(&self) -> Element<Message> {
         use iced::widget::{pick_list, checkbox};
-        use crate::models::{SearchField, SortBy, SortOrder, ARXIV_CATEGORIES};
+        use crate::core::models::{SearchField, SortBy, SortOrder, ARXIV_CATEGORIES};
 
         // 搜索字段选择
         let search_field_list = pick_list(
@@ -482,7 +482,7 @@ impl ArxivManager {
 
     pub fn settings_view(&self) -> Element<Message> {
         use iced::widget::{pick_list, checkbox, text_input};
-        use crate::models::{Theme, Language, SearchField, SortBy, SortOrder};
+        use crate::core::models::{Theme, Language, SearchField, SortBy, SortOrder};
 
         let title = text("Settings")
             .color(GRUVBOX_TEXT)

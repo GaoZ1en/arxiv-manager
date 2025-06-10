@@ -13,6 +13,9 @@ pub struct ArxivPaper {
     pub categories: Vec<String>,
     pub pdf_url: String,
     pub entry_url: String,
+    pub doi: Option<String>,
+    pub journal_ref: Option<String>,
+    pub comments: Option<String>,
 }
 
 #[derive(Debug, Clone)]

@@ -1,4 +1,5 @@
-use crate::core::types::{ArxivPaper, SearchQuery, SortBy, SortOrder};
+use crate::core::models::ArxivPaper;
+use crate::core::types::{SearchQuery, SortBy, SortOrder};
 use crate::utils::{ArxivError, Result};
 use reqwest::Client;
 use chrono::DateTime;
@@ -152,10 +153,10 @@ impl ArxivClient {
             authors,
             abstract_text: abstract_text.trim().to_string(),
             categories,
-            published,
-            updated,
+            published: published.to_rfc3339(),
+            updated: updated.to_rfc3339(),
             pdf_url,
-            abstract_url,
+            entry_url: abstract_url,
             doi,
             journal_ref,
             comments,

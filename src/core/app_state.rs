@@ -3,10 +3,15 @@
 use std::time::Instant;
 use iced::widget::pane_grid;
 use iced::Task;
+use iced::widget::{
+    button, column, container, row, text, text_input, scrollable, progress_bar, 
+    horizontal_rule, vertical_space, horizontal_space
+};
+use iced::{Element, Length, Color, Background, Border, Shadow};
 
-use crate::models::{ArxivPaper, DownloadItem, DownloadStatus, Pane, PaneType, SearchConfig, AppSettings};
-use crate::messages::Message;
-use crate::services::{search_arxiv_papers_advanced, download_pdf};
+use crate::core::{ArxivPaper, DownloadItem, DownloadStatus, Pane, PaneType, SearchConfig, AppSettings};
+use crate::core::messages::Message;
+use crate::search::services::{search_arxiv_papers_advanced, download_pdf};
 
 pub struct ArxivManager {
     pub panes: pane_grid::State<Pane>,
@@ -357,5 +362,19 @@ impl ArxivManager {
         }
         
         Task::none()
+    }
+
+    // 临时的 view 方法，稍后会从 ui/views.rs 移动完整实现
+    pub fn view(&self) -> Element<Message> {
+        container(text("ArXiv Manager - Loading..."))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(|_theme| iced::widget::container::Style {
+                background: Some(Background::Color(Color::from_rgb(0.1, 0.1, 0.1))),
+                border: Border::default(),
+                text_color: Some(Color::WHITE),
+                shadow: Shadow::default(),
+            })
+            .into()
     }
 }

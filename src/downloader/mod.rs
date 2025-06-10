@@ -182,7 +182,8 @@ impl DownloadManager {
     }
     
     pub fn generate_file_path(&self, paper: &ArxivPaper, base_dir: &Path, pattern: &str) -> PathBuf {
-        let year = paper.published.format("%Y").to_string();
+        // Extract year from published date string (assuming format like "2023-01-15T12:00:00Z")
+        let year = paper.published.split('-').next().unwrap_or("unknown").to_string();
         let category = paper.categories.first()
             .map(|c| c.replace(".", "_"))
             .unwrap_or_else(|| "unknown".to_string());

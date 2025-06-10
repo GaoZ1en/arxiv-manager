@@ -1,15 +1,15 @@
 // arXiv 论文管理器 - 带有 halloy 风格界面
 // 模块化架构 - 主入口文件
 
-mod models;
-mod messages;
-mod app_state;
-mod views;
-mod theme;
-mod style;
-mod services;
+mod core;
+mod ui;
+mod search;
+mod utils;
 
-use app_state::ArxivManager;
+use core::ArxivManager;
+
+// 确保所有UI实现被包含
+use ui::*;
 
 fn main() -> iced::Result {
     env_logger::init();

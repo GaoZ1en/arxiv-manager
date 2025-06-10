@@ -3,7 +3,7 @@
 use iced::widget::pane_grid;
 use std::path::PathBuf;
 
-use crate::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder};
+use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -42,7 +42,7 @@ pub enum Message {
     OpenDownloadsPane,
     OpenSettingsPane,
     // 设置消息
-    ThemeChanged(crate::models::Theme),
+    ThemeChanged(crate::core::models::Theme),
     DownloadDirectoryChanged(String),
     AutoDownloadToggled,
     MaxConcurrentDownloadsChanged(String),
@@ -54,7 +54,7 @@ pub enum Message {
     AutoSaveSearchesToggled,
     NotificationToggled,
     CheckUpdatesToggled,
-    LanguageChanged(crate::models::Language),
+    LanguageChanged(crate::core::models::Language),
     ResetSettings,
     ExportSettings,
     ImportSettings,
