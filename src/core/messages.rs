@@ -58,4 +58,99 @@ pub enum Message {
     ResetSettings,
     ExportSettings,
     ImportSettings,
+    // 快捷键设置
+    ShortcutChanged { action: String, shortcut: String },
+    ResetShortcuts,
+    // 键盘快捷键和命令栏
+    ToggleCommandPalette,
+    CommandPaletteInputChanged(String),
+    CommandSelected(usize),
+    ExecuteCommand(Command),
+    ClearCommandPalette,
+    // 快捷键操作
+    FocusSearchInput,
+    QuickSaveCurrentPaper,
+    QuickDownloadCurrentPaper,
+    NavigateToNextPane,
+    NavigateToPreviousPane,
+    ToggleFullscreen,
+}
+
+#[derive(Debug, Clone)]
+pub enum Command {
+    // 搜索命令
+    NewSearch,
+    AdvancedSearch,
+    ClearSearch,
+    // 导航命令  
+    GoToSearch,
+    GoToLibrary,
+    GoToDownloads,
+    GoToSettings,
+    // 面板操作
+    SplitPaneHorizontal,
+    SplitPaneVertical,
+    CloseCurrentPane,
+    // 文件操作
+    OpenPaper(String), // paper title or id
+    SaveCurrentPaper,
+    DownloadCurrentPaper,
+    // 设置操作
+    ToggleTheme,
+    ToggleSidebar,
+    OpenSettings,
+    // 应用操作
+    ShowHelp,
+    ShowAbout,
+    Quit,
+}
+
+impl Command {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Command::NewSearch => "New Search",
+            Command::AdvancedSearch => "Advanced Search",
+            Command::ClearSearch => "Clear Search",
+            Command::GoToSearch => "Go to Search",
+            Command::GoToLibrary => "Go to Library",
+            Command::GoToDownloads => "Go to Downloads", 
+            Command::GoToSettings => "Go to Settings",
+            Command::SplitPaneHorizontal => "Split Pane Horizontally",
+            Command::SplitPaneVertical => "Split Pane Vertically",
+            Command::CloseCurrentPane => "Close Current Pane",
+            Command::OpenPaper(_) => "Open Paper",
+            Command::SaveCurrentPaper => "Save Current Paper",
+            Command::DownloadCurrentPaper => "Download Current Paper",
+            Command::ToggleTheme => "Toggle Theme",
+            Command::ToggleSidebar => "Toggle Sidebar",
+            Command::OpenSettings => "Open Settings",
+            Command::ShowHelp => "Show Help",
+            Command::ShowAbout => "Show About",
+            Command::Quit => "Quit Application",
+        }
+    }
+
+    pub fn keywords(&self) -> Vec<&'static str> {
+        match self {
+            Command::NewSearch => vec!["search", "new", "find"],
+            Command::AdvancedSearch => vec!["advanced", "search", "filter"],
+            Command::ClearSearch => vec!["clear", "reset", "search"],
+            Command::GoToSearch => vec!["go", "search", "navigate"],
+            Command::GoToLibrary => vec!["go", "library", "saved", "papers"],
+            Command::GoToDownloads => vec!["go", "downloads", "files"],
+            Command::GoToSettings => vec!["go", "settings", "preferences"],
+            Command::SplitPaneHorizontal => vec!["split", "horizontal", "pane"],
+            Command::SplitPaneVertical => vec!["split", "vertical", "pane"],
+            Command::CloseCurrentPane => vec!["close", "pane", "tab"],
+            Command::OpenPaper(_) => vec!["open", "paper", "view"],
+            Command::SaveCurrentPaper => vec!["save", "paper", "library"],
+            Command::DownloadCurrentPaper => vec!["download", "pdf", "file"],
+            Command::ToggleTheme => vec!["theme", "dark", "light", "toggle"],
+            Command::ToggleSidebar => vec!["sidebar", "toggle", "hide"],
+            Command::OpenSettings => vec!["settings", "preferences", "config"],
+            Command::ShowHelp => vec!["help", "documentation"],
+            Command::ShowAbout => vec!["about", "version", "info"],
+            Command::Quit => vec!["quit", "exit", "close"],
+        }
+    }
 }

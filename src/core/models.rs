@@ -365,6 +365,89 @@ pub const ARXIV_CATEGORIES: &[(&str, &str)] = &[
     ("econ.TH", "Theoretical Economics"),
 ];
 
+// 键盘快捷键设置
+#[derive(Debug, Clone)]
+pub struct KeyboardShortcuts {
+    pub toggle_command_palette: ShortcutKey,
+    pub focus_search: ShortcutKey,
+    pub quick_save_paper: ShortcutKey,
+    pub quick_download_paper: ShortcutKey,
+    pub toggle_sidebar: ShortcutKey,
+    pub next_pane: ShortcutKey,
+    pub previous_pane: ShortcutKey,
+    pub close_pane: ShortcutKey,
+    pub split_horizontal: ShortcutKey,
+    pub split_vertical: ShortcutKey,
+    pub go_to_search: ShortcutKey,
+    pub go_to_library: ShortcutKey,
+    pub go_to_downloads: ShortcutKey,
+    pub go_to_settings: ShortcutKey,
+}
+
+impl Default for KeyboardShortcuts {
+    fn default() -> Self {
+        Self {
+            toggle_command_palette: ShortcutKey::new("Ctrl+K"),
+            focus_search: ShortcutKey::new("Ctrl+F"),
+            quick_save_paper: ShortcutKey::new("Ctrl+S"),
+            quick_download_paper: ShortcutKey::new("Ctrl+D"),
+            toggle_sidebar: ShortcutKey::new("Ctrl+`"),
+            next_pane: ShortcutKey::new("Ctrl+Tab"),
+            previous_pane: ShortcutKey::new("Ctrl+Shift+Tab"),
+            close_pane: ShortcutKey::new("Ctrl+W"),
+            split_horizontal: ShortcutKey::new("Ctrl+Shift+-"),
+            split_vertical: ShortcutKey::new("Ctrl+Shift+\\"),
+            go_to_search: ShortcutKey::new("Ctrl+1"),
+            go_to_library: ShortcutKey::new("Ctrl+2"),
+            go_to_downloads: ShortcutKey::new("Ctrl+3"),
+            go_to_settings: ShortcutKey::new("Ctrl+4"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ShortcutKey {
+    pub display: String,
+    pub modifiers: Vec<String>,
+    pub key: String,
+}
+
+impl ShortcutKey {
+    pub fn new(display: &str) -> Self {
+        let parts: Vec<&str> = display.split('+').collect();
+        let mut modifiers = Vec::new();
+        let mut key = String::new();
+        
+        for (i, part) in parts.iter().enumerate() {
+            if i == parts.len() - 1 {
+                key = part.to_string();
+            } else {
+                modifiers.push(part.to_string());
+            }
+        }
+        
+        Self {
+            display: display.to_string(),
+            modifiers,
+            key,
+        }
+    }
+    
+    pub fn from_parts(modifiers: Vec<String>, key: String) -> Self {
+        let display = if modifiers.is_empty() {
+            key.clone()
+        } else {
+            format!("{}+{}", modifiers.join("+"), key)
+        };
+        
+        Self {
+            display,
+            modifiers,
+            key,
+        }
+    }
+}
+
 // 应用设置
 #[derive(Debug, Clone)]
 pub struct AppSettings {
@@ -381,6 +464,7 @@ pub struct AppSettings {
     pub notification_enabled: bool,
     pub check_updates: bool,
     pub language: Language,
+    pub shortcuts: KeyboardShortcuts,
 }
 
 impl Default for AppSettings {
@@ -399,6 +483,7 @@ impl Default for AppSettings {
             notification_enabled: true,
             check_updates: true,
             language: Language::English,
+            shortcuts: KeyboardShortcuts::default(),
         }
     }
 }

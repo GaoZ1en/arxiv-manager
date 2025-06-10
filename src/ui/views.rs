@@ -56,7 +56,7 @@ impl ArxivManager {
                 shadow: Shadow::default(),
             });
 
-        if let Some(sidebar) = sidebar {
+        let base_layout = if let Some(sidebar) = sidebar {
             row![sidebar, main_content]
                 .spacing(0)
                 .width(Length::Fill)
@@ -64,6 +64,16 @@ impl ArxivManager {
                 .into()
         } else {
             main_content.into()
+        };
+
+        // 如果命令栏可见，添加覆盖层
+        if self.command_palette_visible {
+            iced::widget::stack![
+                base_layout,
+                self.command_palette_overlay()
+            ].into()
+        } else {
+            base_layout
         }
     }
 
@@ -631,6 +641,37 @@ impl ArxivManager {
             ]
         );
 
+        // 快捷键设置
+        let shortcuts_section = self.create_settings_section(
+            "Keyboard Shortcuts",
+            GRUVBOX_ORANGE,
+            vec![
+                self.create_shortcut_setting("Toggle Command Palette:", "toggle_command_palette", &self.settings.shortcuts.toggle_command_palette.display),
+                self.create_shortcut_setting("Focus Search:", "focus_search", &self.settings.shortcuts.focus_search.display),
+                self.create_shortcut_setting("Quick Save Paper:", "quick_save_paper", &self.settings.shortcuts.quick_save_paper.display),
+                self.create_shortcut_setting("Quick Download Paper:", "quick_download_paper", &self.settings.shortcuts.quick_download_paper.display),
+                self.create_shortcut_setting("Toggle Sidebar:", "toggle_sidebar", &self.settings.shortcuts.toggle_sidebar.display),
+                self.create_shortcut_setting("Next Pane:", "next_pane", &self.settings.shortcuts.next_pane.display),
+                self.create_shortcut_setting("Previous Pane:", "previous_pane", &self.settings.shortcuts.previous_pane.display),
+                self.create_shortcut_setting("Close Pane:", "close_pane", &self.settings.shortcuts.close_pane.display),
+                self.create_shortcut_setting("Split Horizontal:", "split_horizontal", &self.settings.shortcuts.split_horizontal.display),
+                self.create_shortcut_setting("Split Vertical:", "split_vertical", &self.settings.shortcuts.split_vertical.display),
+                self.create_shortcut_setting("Go to Search:", "go_to_search", &self.settings.shortcuts.go_to_search.display),
+                self.create_shortcut_setting("Go to Library:", "go_to_library", &self.settings.shortcuts.go_to_library.display),
+                self.create_shortcut_setting("Go to Downloads:", "go_to_downloads", &self.settings.shortcuts.go_to_downloads.display),
+                self.create_shortcut_setting("Go to Settings:", "go_to_settings", &self.settings.shortcuts.go_to_settings.display),
+                row![
+                    button(text("Reset All Shortcuts").color(Color::WHITE))
+                        .on_press(Message::ResetShortcuts)
+                        .style(button_danger_style),
+                    horizontal_space(),
+                    text("Reset all shortcuts to default values")
+                        .color(GRUVBOX_TEXT_MUTED)
+                        .size(12),
+                ].spacing(10).into()
+            ]
+        );
+
         // 操作按钮
         let action_buttons = row![
             button(text("Reset to Defaults").color(Color::WHITE))
@@ -658,6 +699,8 @@ impl ArxivManager {
                     search_section,
                     vertical_space().height(15),
                     notification_section,
+                    vertical_space().height(15),
+                    shortcuts_section,
                     vertical_space().height(25),
                     action_buttons,
                 ].spacing(10)
@@ -754,6 +797,60 @@ impl ArxivManager {
                 radius: 2.0.into(),
             },
             text_color: Some(GRUVBOX_TEXT),
+        }
+    }
+
+    fn create_shortcut_setting<'a>(&self, label: &'a str, action: &'a str, current_shortcut: &'a str) -> Element<'a, Message> {
+        use iced::widget::{text_input, button, text};
+        
+        let shortcut_input = text_input("Enter shortcut...", current_shortcut)
+            .on_input(move |new_shortcut| Message::ShortcutChanged { 
+                action: action.to_string(), 
+                shortcut: new_shortcut 
+            })
+            .size(14)
+            .width(Length::Fixed(150.0))
+            .style(self.text_input_style());
+
+        let reset_button = button(text("Reset").size(12))
+            .on_press(Message::ShortcutChanged { 
+                action: action.to_string(), 
+                shortcut: self.get_default_shortcut(action) 
+            })
+            .style(button_secondary_style);
+
+        self.create_setting_row(
+            label,
+            row![
+                shortcut_input,
+                horizontal_space().width(8),
+                reset_button,
+            ]
+            .align_y(iced::Alignment::Center)
+            .into()
+        )
+    }
+
+    fn get_default_shortcut(&self, action: &str) -> String {
+        use crate::core::models::KeyboardShortcuts;
+        let defaults = KeyboardShortcuts::default();
+        
+        match action {
+            "toggle_command_palette" => defaults.toggle_command_palette.display,
+            "focus_search" => defaults.focus_search.display,
+            "quick_save_paper" => defaults.quick_save_paper.display,
+            "quick_download_paper" => defaults.quick_download_paper.display,
+            "toggle_sidebar" => defaults.toggle_sidebar.display,
+            "next_pane" => defaults.next_pane.display,
+            "previous_pane" => defaults.previous_pane.display,
+            "close_pane" => defaults.close_pane.display,
+            "split_horizontal" => defaults.split_horizontal.display,
+            "split_vertical" => defaults.split_vertical.display,
+            "go_to_search" => defaults.go_to_search.display,
+            "go_to_library" => defaults.go_to_library.display,
+            "go_to_downloads" => defaults.go_to_downloads.display,
+            "go_to_settings" => defaults.go_to_settings.display,
+            _ => "".to_string(),
         }
     }
 
@@ -903,5 +1000,160 @@ impl ArxivManager {
                 shadow: Shadow::default(),
             })
             .into()
+    }
+
+    // 命令栏覆盖层
+    pub fn command_palette_overlay(&self) -> Element<Message> {
+        use iced::widget::{container, column, row, text, text_input, scrollable};
+        
+        // 命令栏主体
+        let command_input = text_input("Type a command...", &self.command_palette_input)
+            .on_input(Message::CommandPaletteInputChanged)
+            .on_submit(if let Some(index) = self.selected_command_index {
+                if let Some(command) = self.command_suggestions.get(index) {
+                    Message::ExecuteCommand(command.clone())
+                } else {
+                    Message::ClearCommandPalette
+                }
+            } else {
+                Message::ClearCommandPalette
+            })
+            .size(18)
+            .style(|_theme, status| iced::widget::text_input::Style {
+                background: Background::Color(GRUVBOX_SURFACE),
+                border: Border {
+                    color: match status {
+                        iced::widget::text_input::Status::Focused => GRUVBOX_GREEN,
+                        _ => GRUVBOX_BORDER,
+                    },
+                    width: 2.0,
+                    radius: 6.0.into(),
+                },
+                icon: Color::TRANSPARENT,
+                placeholder: GRUVBOX_TEXT_MUTED,
+                value: GRUVBOX_TEXT,
+                selection: GRUVBOX_GREEN,
+            });
+
+        // 命令建议列表
+        let suggestions_list = if !self.command_suggestions.is_empty() {
+            let suggestions = column(
+                self.command_suggestions.iter().enumerate().map(|(index, command)| {
+                    let is_selected = self.selected_command_index == Some(index);
+                    
+                    let command_button = button(
+                        row![
+                            text(command.display_name())
+                                .color(if is_selected { Color::BLACK } else { GRUVBOX_TEXT })
+                                .size(14),
+                            horizontal_space(),
+                            text(command.keywords().join(" "))
+                                .color(if is_selected { Color::from_rgb(0.3, 0.3, 0.3) } else { GRUVBOX_TEXT_MUTED })
+                                .size(12),
+                        ]
+                        .padding([8, 12])
+                        .width(Length::Fill)
+                    )
+                    .on_press(Message::ExecuteCommand(command.clone()))
+                    .width(Length::Fill)
+                    .style(move |_theme, status| {
+                        let base_color = if is_selected {
+                            GRUVBOX_GREEN
+                        } else {
+                            GRUVBOX_SURFACE
+                        };
+                        
+                        iced::widget::button::Style {
+                            background: Some(Background::Color(match status {
+                                iced::widget::button::Status::Hovered => {
+                                    if is_selected {
+                                        Color::from_rgb(
+                                            GRUVBOX_GREEN.r * 0.9,
+                                            GRUVBOX_GREEN.g * 0.9,
+                                            GRUVBOX_GREEN.b * 0.9,
+                                        )
+                                    } else {
+                                        Color::from_rgb(
+                                            GRUVBOX_SURFACE.r * 1.1,
+                                            GRUVBOX_SURFACE.g * 1.1,
+                                            GRUVBOX_SURFACE.b * 1.1,
+                                        )
+                                    }
+                                }
+                                _ => base_color,
+                            })),
+                            text_color: if is_selected { Color::BLACK } else { GRUVBOX_TEXT },
+                            border: Border {
+                                color: if is_selected { GRUVBOX_GREEN } else { Color::TRANSPARENT },
+                                width: if is_selected { 1.0 } else { 0.0 },
+                                radius: 4.0.into(),
+                            },
+                            shadow: Shadow::default(),
+                        }
+                    });
+
+                    command_button.into()
+                }).collect::<Vec<Element<Message>>>()
+            )
+            .spacing(2);
+
+            scrollable(suggestions)
+                .height(Length::Fixed(300.0))
+        } else {
+            scrollable(
+                container(
+                    text("No commands found")
+                        .color(GRUVBOX_TEXT_MUTED)
+                        .size(14)
+                )
+                .padding(20)
+                .center_x(Length::Fill)
+            )
+            .height(Length::Fixed(60.0))
+        };
+
+        let command_palette = container(
+            column![
+                command_input,
+                vertical_space().height(8),
+                suggestions_list
+            ]
+            .spacing(0)
+        )
+        .padding(20)
+        .width(Length::Fixed(600.0))
+        .max_height(400.0)
+        .style(|_theme| iced::widget::container::Style {
+            background: Some(Background::Color(GRUVBOX_BG)),
+            border: Border {
+                color: GRUVBOX_BORDER,
+                width: 2.0,
+                radius: 12.0.into(),
+            },
+            text_color: Some(GRUVBOX_TEXT),
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
+                offset: iced::Vector::new(0.0, 4.0),
+                blur_radius: 20.0,
+            },
+        });
+
+        // 将命令栏居中显示，添加半透明背景
+        container(
+            container(command_palette)
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .width(Length::Fill)
+                .height(Length::Fill)
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(|_theme| iced::widget::container::Style {
+            background: Some(Background::Color(Color::from_rgba(0.0, 0.0, 0.0, 0.5))),
+            border: Border::default(),
+            text_color: None,
+            shadow: Shadow::default(),
+        })
+        .into()
     }
 }

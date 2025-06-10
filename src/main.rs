@@ -15,6 +15,7 @@ fn main() -> iced::Result {
     env_logger::init();
     
     iced::application("arXiv Paper Manager", ArxivManager::update, ArxivManager::view)
+        .subscription(ArxivManager::subscription)
         .theme(ArxivManager::theme)
         .window_size((1400.0, 900.0))
         .run_with(|| {
