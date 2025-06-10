@@ -1,1 +1,0 @@
-<Theme as StyleSheet>::Style == fn() -> Appearance {primary}

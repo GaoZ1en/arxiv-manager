@@ -1,1 +1,0 @@
-iced::advanced::iced_graphics::iced_core::Element<'_, ui::Message, iced_renderer::Renderer<iced::Theme>>

@@ -1,1 +1,0 @@
-fn() -> iced::widget::container::Appearance {card}
