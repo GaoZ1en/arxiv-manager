@@ -1,17 +1,17 @@
-// 应用状态管理
+// 应用状态管理 - 标签页版本
 
 use std::time::Instant;
-use iced::widget::pane_grid;
 use iced::{Task, Subscription, Event};
 use iced::keyboard::{Key, Modifiers};
 
-use crate::core::{ArxivPaper, DownloadItem, DownloadStatus, Pane, PaneType, SearchConfig, AppSettings};
+use crate::core::{ArxivPaper, DownloadItem, DownloadStatus, SearchConfig, AppSettings, Tab, TabContent};
 use crate::core::messages::{Message, Command};
 use crate::search::services::{search_arxiv_papers_advanced, download_pdf};
 
 pub struct ArxivManager {
-    pub panes: pane_grid::State<Pane>,
-    pub focus: Option<pane_grid::Pane>,
+    pub tabs: Vec<Tab>,
+    pub active_tab: usize,
+    pub next_tab_id: usize,
     pub sidebar_visible: bool,
     pub search_query: String,
     pub search_config: SearchConfig,
@@ -28,18 +28,24 @@ pub struct ArxivManager {
     pub command_palette_input: String,
     pub command_suggestions: Vec<Command>,
     pub selected_command_index: Option<usize>,
+    // 快捷键编辑状态
+    pub editing_shortcut: Option<String>, // 正在编辑的快捷键动作
+    pub shortcut_input: String,           // 快捷键输入缓存
 }
 
 impl ArxivManager {
     pub fn new() -> (Self, Task<Message>) {
-        let (panes, _first_pane) = pane_grid::State::new(Pane {
-            pane_type: PaneType::Search,
-            title: "Search".to_string(),
-        });
+        // 创建默认标签页
+        let mut tabs = Vec::new();
+        tabs.push(Tab::new(0, "搜索".to_string(), TabContent::Search));
+        tabs.push(Tab::new(1, "论文库".to_string(), TabContent::Library));
+        tabs.push(Tab::new(2, "下载".to_string(), TabContent::Downloads));
+        tabs.push(Tab::new(3, "设置".to_string(), TabContent::Settings));
 
         let manager = Self {
-            panes,
-            focus: None,
+            tabs,
+            active_tab: 0,
+            next_tab_id: 4,
             sidebar_visible: true,
             search_query: String::new(),
             search_config: SearchConfig::default(),
@@ -56,6 +62,9 @@ impl ArxivManager {
             command_palette_input: String::new(),
             command_suggestions: Vec::new(),
             selected_command_index: None,
+            // 快捷键编辑状态初始化
+            editing_shortcut: None,
+            shortcut_input: String::new(),
         };
 
         (manager, Task::none())
@@ -63,17 +72,59 @@ impl ArxivManager {
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::PaneClicked(pane) => {
-                self.focus = Some(pane);
-                self.last_interaction = Some(Instant::now());
+            // 标签页操作
+            Message::TabClicked(tab_index) => {
+                if tab_index < self.tabs.len() {
+                    self.active_tab = tab_index;
+                    self.last_interaction = Some(Instant::now());
+                }
                 Task::none()
             }
-            Message::PaneResized(resize_event) => {
-                self.panes.resize(resize_event.split, resize_event.ratio);
+            Message::TabClose(tab_index) => {
+                if tab_index < self.tabs.len() && self.tabs[tab_index].closable {
+                    self.tabs.remove(tab_index);
+                    // 调整活动标签页索引
+                    if self.active_tab >= self.tabs.len() && !self.tabs.is_empty() {
+                        self.active_tab = self.tabs.len() - 1;
+                    }
+                }
                 Task::none()
             }
-            Message::PaneDragged(_drag_event) => {
-                // In iced 0.13, drag handling is managed automatically by the pane grid
+            Message::NavigateToNextTab => {
+                self.navigate_to_next_tab();
+                Task::none()
+            }
+            Message::NavigateToPreviousTab => {
+                self.navigate_to_previous_tab();
+                Task::none()
+            }
+            Message::CloseActiveTab => {
+                // 关闭当前活动标签页
+                if self.active_tab < self.tabs.len() && self.tabs[self.active_tab].closable {
+                    self.update(Message::TabClose(self.active_tab))
+                } else {
+                    Task::none()
+                }
+            }
+            Message::NewTab(content) => {
+                let title = match &content {
+                    TabContent::Search => "搜索".to_string(),
+                    TabContent::Library => "论文库".to_string(),
+                    TabContent::Downloads => "下载".to_string(),
+                    TabContent::Settings => "设置".to_string(),
+                    TabContent::PaperView(index) => {
+                        if let Some(paper) = self.saved_papers.get(*index) {
+                            paper.title.clone()
+                        } else {
+                            "论文查看".to_string()
+                        }
+                    }
+                };
+                
+                let new_tab = Tab::new(self.next_tab_id, title, content);
+                self.tabs.push(new_tab);
+                self.active_tab = self.tabs.len() - 1;
+                self.next_tab_id += 1;
                 Task::none()
             }
             Message::SidebarToggled => {
@@ -209,73 +260,6 @@ impl ArxivManager {
                 self.saved_papers.retain(|p| p.id != paper_id);
                 Task::none()
             }
-            Message::OpenPaperPane(paper) => {
-                // 检查论文是否已经在saved_papers中
-                let index = if let Some(existing_index) = self.saved_papers.iter().position(|p| p.id == paper.id) {
-                    existing_index
-                } else {
-                    // 如果不在，则添加
-                    self.saved_papers.push(paper.clone());
-                    self.saved_papers.len() - 1
-                };
-                
-                let pane_type = PaneType::PaperView(index);
-                let new_pane = Pane {
-                    pane_type,
-                    title: paper.title.clone(),
-                };
-                
-                if let Some(focus) = self.focus {
-                    let _ = self.panes.split(
-                        pane_grid::Axis::Vertical,
-                        focus,
-                        new_pane,
-                    );
-                }
-                // If no focus, we can't split - just save the paper instead
-                Task::none()
-            }
-            Message::CloseFocusedPane => {
-                if let Some(focus) = self.focus {
-                    if let Some(_) = self.panes.close(focus) {
-                        self.focus = None;
-                    }
-                }
-                Task::none()
-            }
-            Message::SplitHorizontal => {
-                if let Some(focus) = self.focus {
-                    let new_pane = Pane {
-                        pane_type: PaneType::Search,
-                        title: "Search".to_string(),
-                    };
-                    let _ = self.panes.split(pane_grid::Axis::Horizontal, focus, new_pane);
-                }
-                Task::none()
-            }
-            Message::SplitVertical => {
-                if let Some(focus) = self.focus {
-                    let new_pane = Pane {
-                        pane_type: PaneType::Search,
-                        title: "Search".to_string(),
-                    };
-                    let _ = self.panes.split(pane_grid::Axis::Vertical, focus, new_pane);
-                }
-                Task::none()
-            }
-            // 面板导航消息处理
-            Message::OpenSearchPane => {
-                self.open_pane(PaneType::Search, "Search".to_string())
-            }
-            Message::OpenLibraryPane => {
-                self.open_pane(PaneType::Library, "Library".to_string())
-            }
-            Message::OpenDownloadsPane => {
-                self.open_pane(PaneType::Downloads, "Downloads".to_string())
-            }
-            Message::OpenSettingsPane => {
-                self.open_pane(PaneType::Settings, "Settings".to_string())
-            }
             // 设置消息处理
             Message::ThemeChanged(theme) => {
                 self.settings.theme = theme;
@@ -348,10 +332,28 @@ impl ArxivManager {
             // 快捷键设置消息处理
             Message::ShortcutChanged { action, shortcut } => {
                 self.update_shortcut(&action, &shortcut);
+                self.editing_shortcut = None;
+                self.shortcut_input.clear();
+                Task::none()
+            }
+            Message::ShortcutEditStarted(action) => {
+                self.editing_shortcut = Some(action);
+                self.shortcut_input.clear();
+                Task::none()
+            }
+            Message::ShortcutEditCancelled => {
+                self.editing_shortcut = None;
+                self.shortcut_input.clear();
+                Task::none()
+            }
+            Message::ShortcutInputChanged(input) => {
+                self.shortcut_input = input;
                 Task::none()
             }
             Message::ResetShortcuts => {
                 self.settings.shortcuts = crate::core::models::KeyboardShortcuts::default();
+                self.editing_shortcut = None;
+                self.shortcut_input.clear();
                 Task::none()
             }
             // 命令栏消息处理
@@ -395,11 +397,12 @@ impl ArxivManager {
             }
             // 快捷键操作处理
             Message::FocusSearchInput => {
-                // 如果不在搜索面板，先打开搜索面板
-                if !self.is_search_pane_active() {
-                    self.open_pane(PaneType::Search, "Search".to_string())
-                } else {
+                // 切换到搜索标签页
+                if let Some(search_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Search)) {
+                    self.active_tab = search_tab_index;
                     Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Search))
                 }
             }
             Message::QuickSaveCurrentPaper => {
@@ -416,20 +419,16 @@ impl ArxivManager {
                     Task::none()
                 }
             }
-            Message::NavigateToNextPane => {
-                self.navigate_to_next_pane();
-                Task::none()
-            }
-            Message::NavigateToPreviousPane => {
-                self.navigate_to_previous_pane();
-                Task::none()
-            }
             Message::ToggleFullscreen => {
                 // TODO: 实现全屏切换
                 Task::none()
             }
             Message::NoOp => {
                 // 占位符消息，不执行任何操作
+                Task::none()
+            }
+            // 兼容性处理 - 忽略不再使用的 pane 相关消息
+            Message::PaneClicked(_) | Message::PaneResized(_) | Message::PaneDragged(_) => {
                 Task::none()
             }
         }
@@ -482,43 +481,40 @@ impl ArxivManager {
                         (Key::Character("`"), Modifiers::CTRL) => {
                             Message::SidebarToggled
                         }
-                        // Ctrl+Tab: 下一个面板
+                        // Ctrl+Tab: 下一个标签页
                         (Key::Named(iced::keyboard::key::Named::Tab), modifiers) if modifiers.contains(Modifiers::CTRL) && !modifiers.contains(Modifiers::SHIFT) => {
-                            Message::NavigateToNextPane
+                            Message::NavigateToNextTab
                         }
-                        // Ctrl+Shift+Tab: 上一个面板
+                        // Ctrl+Shift+Tab: 上一个标签页
                         (Key::Named(iced::keyboard::key::Named::Tab), modifiers) if modifiers.contains(Modifiers::CTRL) && modifiers.contains(Modifiers::SHIFT) => {
-                            Message::NavigateToPreviousPane
+                            Message::NavigateToPreviousTab
                         }
-                        // Ctrl+W: 关闭当前面板
+                        // Ctrl+W: 关闭当前标签页 (创建一个特殊消息来处理)
                         (Key::Character("W"), Modifiers::CTRL) |
                         (Key::Character("w"), Modifiers::CTRL) => {
-                            Message::CloseFocusedPane
+                            Message::CloseActiveTab
                         }
-                        // Ctrl+Shift+\: 垂直分割
-                        (Key::Character("\\"), Modifiers::CTRL | Modifiers::SHIFT) => {
-                            Message::SplitVertical
-                        }
-                        // Ctrl+Shift+-: 水平分割
-                        (Key::Character("-"), Modifiers::CTRL | Modifiers::SHIFT) => {
-                            Message::SplitHorizontal
+                        // Ctrl+T: 新建搜索标签页
+                        (Key::Character("T"), Modifiers::CTRL) |
+                        (Key::Character("t"), Modifiers::CTRL) => {
+                            Message::NewTab(TabContent::Search)
                         }
                         // F11: 全屏切换
                         (Key::Named(iced::keyboard::key::Named::F11), _) => {
                             Message::ToggleFullscreen
                         }
-                        // 数字键快速导航
+                        // 数字键快速导航到标签页
                         (Key::Character("1"), Modifiers::CTRL) => {
-                            Message::OpenSearchPane
+                            Message::TabClicked(0) // 搜索标签页
                         }
                         (Key::Character("2"), Modifiers::CTRL) => {
-                            Message::OpenLibraryPane
+                            Message::TabClicked(1) // 论文库标签页
                         }
                         (Key::Character("3"), Modifiers::CTRL) => {
-                            Message::OpenDownloadsPane
+                            Message::TabClicked(2) // 下载标签页
                         }
                         (Key::Character("4"), Modifiers::CTRL) => {
-                            Message::OpenSettingsPane
+                            Message::TabClicked(3) // 设置标签页
                         }
                         _ => Message::NoOp, // 不匹配的按键使用NoOp
                     }
@@ -526,24 +522,6 @@ impl ArxivManager {
                 _ => Message::NoOp, // 非键盘事件使用NoOp
             }
         })
-    }
-
-    // 辅助方法：打开新面板
-    fn open_pane(&mut self, pane_type: PaneType, title: String) -> Task<Message> {
-        let new_pane = Pane { pane_type, title };
-        
-        let target_pane = if let Some(focus) = self.focus {
-            Some(focus)
-        } else {
-            // 获取第一个面板的ID
-            self.panes.iter().next().map(|(id, _)| *id)
-        };
-        
-        if let Some(pane_id) = target_pane {
-            let _ = self.panes.split(pane_grid::Axis::Vertical, pane_id, new_pane);
-        }
-        
-        Task::none()
     }
 
     // 命令栏相关辅助方法
@@ -556,9 +534,6 @@ impl ArxivManager {
             Command::GoToLibrary,
             Command::GoToDownloads,
             Command::GoToSettings,
-            Command::SplitPaneHorizontal,
-            Command::SplitPaneVertical,
-            Command::CloseCurrentPane,
             Command::SaveCurrentPaper,
             Command::DownloadCurrentPaper,
             Command::ToggleTheme,
@@ -618,11 +593,17 @@ impl ArxivManager {
                 self.search_config.query.clear();
                 self.search_results.clear();
                 self.search_error = None;
-                self.open_pane(PaneType::Search, "Search".to_string())
+                self.update(Message::NewTab(TabContent::Search))
             }
             Command::AdvancedSearch => {
                 self.advanced_search_visible = true;
-                self.open_pane(PaneType::Search, "Search".to_string())
+                // 切换到搜索标签页
+                if let Some(search_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Search)) {
+                    self.active_tab = search_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Search))
+                }
             }
             Command::ClearSearch => {
                 self.search_query.clear();
@@ -631,41 +612,41 @@ impl ArxivManager {
                 self.search_error = None;
                 Task::none()
             }
-            Command::GoToSearch => self.open_pane(PaneType::Search, "Search".to_string()),
-            Command::GoToLibrary => self.open_pane(PaneType::Library, "Library".to_string()),
-            Command::GoToDownloads => self.open_pane(PaneType::Downloads, "Downloads".to_string()),
-            Command::GoToSettings => self.open_pane(PaneType::Settings, "Settings".to_string()),
-            Command::SplitPaneHorizontal => {
-                if let Some(focus) = self.focus {
-                    let new_pane = Pane {
-                        pane_type: PaneType::Search,
-                        title: "Search".to_string(),
-                    };
-                    let _ = self.panes.split(pane_grid::Axis::Horizontal, focus, new_pane);
+            Command::GoToSearch => {
+                if let Some(search_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Search)) {
+                    self.active_tab = search_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Search))
                 }
-                Task::none()
             }
-            Command::SplitPaneVertical => {
-                if let Some(focus) = self.focus {
-                    let new_pane = Pane {
-                        pane_type: PaneType::Search,
-                        title: "Search".to_string(),
-                    };
-                    let _ = self.panes.split(pane_grid::Axis::Vertical, focus, new_pane);
+            Command::GoToLibrary => {
+                if let Some(library_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Library)) {
+                    self.active_tab = library_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Library))
                 }
-                Task::none()
             }
-            Command::CloseCurrentPane => {
-                if let Some(focus) = self.focus {
-                    if let Some(_) = self.panes.close(focus) {
-                        self.focus = None;
-                    }
+            Command::GoToDownloads => {
+                if let Some(downloads_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Downloads)) {
+                    self.active_tab = downloads_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Downloads))
                 }
-                Task::none()
+            }
+            Command::GoToSettings => {
+                if let Some(settings_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Settings)) {
+                    self.active_tab = settings_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Settings))
+                }
             }
             Command::OpenPaper(title) => {
-                if let Some(paper) = self.saved_papers.iter().find(|p| p.title == title).cloned() {
-                    self.update(Message::OpenPaperPane(paper))
+                if let Some((index, _)) = self.saved_papers.iter().enumerate().find(|(_, p)| p.title == title) {
+                    self.update(Message::NewTab(TabContent::PaperView(index)))
                 } else {
                     Task::none()
                 }
@@ -692,7 +673,14 @@ impl ArxivManager {
                 self.sidebar_visible = !self.sidebar_visible;
                 Task::none()
             }
-            Command::OpenSettings => self.open_pane(PaneType::Settings, "Settings".to_string()),
+            Command::OpenSettings => {
+                if let Some(settings_tab_index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Settings)) {
+                    self.active_tab = settings_tab_index;
+                    Task::none()
+                } else {
+                    self.update(Message::NewTab(TabContent::Settings))
+                }
+            }
             Command::ShowHelp => {
                 // TODO: 实现帮助对话框
                 Task::none()
@@ -705,81 +693,52 @@ impl ArxivManager {
                 // TODO: 实现应用退出
                 Task::none()
             }
+            // 分屏相关命令转换为新标签页
+            Command::SplitPaneHorizontal | Command::SplitPaneVertical => {
+                self.update(Message::NewTab(TabContent::Search))
+            }
+            Command::CloseCurrentPane => {
+                self.update(Message::CloseActiveTab)
+            }
         }
     }
 
     // 辅助方法
-    fn is_search_pane_active(&self) -> bool {
-        if let Some(focus) = self.focus {
-            if let Some(pane) = self.panes.get(focus) {
-                matches!(pane.pane_type, PaneType::Search)
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
     fn get_current_paper(&self) -> Option<ArxivPaper> {
-        // 尝试从当前焦点面板获取论文
-        if let Some(focus) = self.focus {
-            if let Some(pane) = self.panes.get(focus) {
-                match &pane.pane_type {
-                    PaneType::PaperView(index) => {
-                        self.saved_papers.get(*index).cloned()
-                    }
-                    PaneType::Search => {
-                        // 如果在搜索面板，获取第一个搜索结果
-                        self.search_results.first().cloned()
-                    }
-                    _ => None,
+        // 从当前活动标签页获取论文
+        if let Some(current_tab) = self.tabs.get(self.active_tab) {
+            match &current_tab.content {
+                TabContent::PaperView(index) => {
+                    self.saved_papers.get(*index).cloned()
                 }
-            } else {
-                None
+                TabContent::Search => {
+                    // 如果在搜索标签页，获取第一个搜索结果
+                    self.search_results.first().cloned()
+                }
+                _ => None,
             }
         } else {
             None
         }
     }
 
-    fn navigate_to_next_pane(&mut self) {
-        let panes: Vec<_> = self.panes.iter().map(|(id, _)| *id).collect();
-        if panes.is_empty() {
-            return;
-        }
-
-        if let Some(current_focus) = self.focus {
-            if let Some(current_index) = panes.iter().position(|&id| id == current_focus) {
-                let next_index = (current_index + 1) % panes.len();
-                self.focus = Some(panes[next_index]);
-            }
-        } else {
-            self.focus = Some(panes[0]);
+    fn navigate_to_next_tab(&mut self) {
+        if !self.tabs.is_empty() {
+            self.active_tab = (self.active_tab + 1) % self.tabs.len();
         }
     }
 
-    fn navigate_to_previous_pane(&mut self) {
-        let panes: Vec<_> = self.panes.iter().map(|(id, _)| *id).collect();
-        if panes.is_empty() {
-            return;
-        }
-
-        if let Some(current_focus) = self.focus {
-            if let Some(current_index) = panes.iter().position(|&id| id == current_focus) {
-                let prev_index = if current_index == 0 {
-                    panes.len() - 1
-                } else {
-                    current_index - 1
-                };
-                self.focus = Some(panes[prev_index]);
-            }
-        } else {
-            self.focus = Some(panes[0]);
+    fn navigate_to_previous_tab(&mut self) {
+        if !self.tabs.is_empty() {
+            self.active_tab = if self.active_tab == 0 {
+                self.tabs.len() - 1
+            } else {
+                self.active_tab - 1
+            };
         }
     }
 
-    // 快捷键更新方法
+    // 快捷键更新辅助方法
     fn update_shortcut(&mut self, action: &str, shortcut: &str) {
         use crate::core::models::ShortcutKey;
         
@@ -791,11 +750,10 @@ impl ArxivManager {
             "quick_save_paper" => self.settings.shortcuts.quick_save_paper = new_shortcut,
             "quick_download_paper" => self.settings.shortcuts.quick_download_paper = new_shortcut,
             "toggle_sidebar" => self.settings.shortcuts.toggle_sidebar = new_shortcut,
-            "next_pane" => self.settings.shortcuts.next_pane = new_shortcut,
-            "previous_pane" => self.settings.shortcuts.previous_pane = new_shortcut,
-            "close_pane" => self.settings.shortcuts.close_pane = new_shortcut,
-            "split_horizontal" => self.settings.shortcuts.split_horizontal = new_shortcut,
-            "split_vertical" => self.settings.shortcuts.split_vertical = new_shortcut,
+            "next_tab" => self.settings.shortcuts.next_tab = new_shortcut,
+            "previous_tab" => self.settings.shortcuts.previous_tab = new_shortcut,
+            "close_tab" => self.settings.shortcuts.close_tab = new_shortcut,
+            "new_tab" => self.settings.shortcuts.new_tab = new_shortcut,
             "go_to_search" => self.settings.shortcuts.go_to_search = new_shortcut,
             "go_to_library" => self.settings.shortcuts.go_to_library = new_shortcut,
             "go_to_downloads" => self.settings.shortcuts.go_to_downloads = new_shortcut,
@@ -803,6 +761,4 @@ impl ArxivManager {
             _ => {}
         }
     }
-
-
 }

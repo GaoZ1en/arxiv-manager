@@ -4,6 +4,7 @@ use iced::Color;
 
 // Gruvbox 暗色主题颜色
 pub const GRUVBOX_BG: Color = Color::from_rgb(0.16, 0.16, 0.16);     // #282828
+pub const GRUVBOX_BG_LIGHT: Color = Color::from_rgb(0.20, 0.19, 0.17); // #32302f
 pub const GRUVBOX_SURFACE: Color = Color::from_rgb(0.20, 0.19, 0.17); // #32302f
 pub const GRUVBOX_BORDER: Color = Color::from_rgb(0.35, 0.33, 0.29);  // #595959
 pub const GRUVBOX_TEXT: Color = Color::from_rgb(0.92, 0.86, 0.70);    // #ebdbb2

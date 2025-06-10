@@ -373,11 +373,10 @@ pub struct KeyboardShortcuts {
     pub quick_save_paper: ShortcutKey,
     pub quick_download_paper: ShortcutKey,
     pub toggle_sidebar: ShortcutKey,
-    pub next_pane: ShortcutKey,
-    pub previous_pane: ShortcutKey,
-    pub close_pane: ShortcutKey,
-    pub split_horizontal: ShortcutKey,
-    pub split_vertical: ShortcutKey,
+    pub next_tab: ShortcutKey,
+    pub previous_tab: ShortcutKey,
+    pub close_tab: ShortcutKey,
+    pub new_tab: ShortcutKey,
     pub go_to_search: ShortcutKey,
     pub go_to_library: ShortcutKey,
     pub go_to_downloads: ShortcutKey,
@@ -392,16 +391,35 @@ impl Default for KeyboardShortcuts {
             quick_save_paper: ShortcutKey::new("Ctrl+S"),
             quick_download_paper: ShortcutKey::new("Ctrl+D"),
             toggle_sidebar: ShortcutKey::new("Ctrl+`"),
-            next_pane: ShortcutKey::new("Ctrl+Tab"),
-            previous_pane: ShortcutKey::new("Ctrl+Shift+Tab"),
-            close_pane: ShortcutKey::new("Ctrl+W"),
-            split_horizontal: ShortcutKey::new("Ctrl+Shift+-"),
-            split_vertical: ShortcutKey::new("Ctrl+Shift+\\"),
+            next_tab: ShortcutKey::new("Ctrl+Tab"),
+            previous_tab: ShortcutKey::new("Ctrl+Shift+Tab"),
+            close_tab: ShortcutKey::new("Ctrl+W"),
+            new_tab: ShortcutKey::new("Ctrl+T"),
             go_to_search: ShortcutKey::new("Ctrl+1"),
             go_to_library: ShortcutKey::new("Ctrl+2"),
             go_to_downloads: ShortcutKey::new("Ctrl+3"),
             go_to_settings: ShortcutKey::new("Ctrl+4"),
         }
+    }
+}
+
+impl KeyboardShortcuts {
+    pub fn get_all_actions(&self) -> Vec<(&'static str, &str, &ShortcutKey)> {
+        vec![
+            ("toggle_command_palette", "切换命令面板", &self.toggle_command_palette),
+            ("focus_search", "聚焦搜索框", &self.focus_search),
+            ("quick_save_paper", "快速保存论文", &self.quick_save_paper),
+            ("quick_download_paper", "快速下载论文", &self.quick_download_paper),
+            ("toggle_sidebar", "切换侧边栏", &self.toggle_sidebar),
+            ("next_tab", "下一个标签页", &self.next_tab),
+            ("previous_tab", "上一个标签页", &self.previous_tab),
+            ("close_tab", "关闭标签页", &self.close_tab),
+            ("new_tab", "新建标签页", &self.new_tab),
+            ("go_to_search", "转到搜索", &self.go_to_search),
+            ("go_to_library", "转到论文库", &self.go_to_library),
+            ("go_to_downloads", "转到下载", &self.go_to_downloads),
+            ("go_to_settings", "转到设置", &self.go_to_settings),
+        ]
     }
 }
 
@@ -445,6 +463,30 @@ impl ShortcutKey {
             modifiers,
             key,
         }
+    }
+    
+    pub fn is_valid_shortcut(input: &str) -> bool {
+        if input.trim().is_empty() {
+            return false;
+        }
+        
+        // 基本验证：确保格式为 Modifier+Key 或单独的键
+        let parts: Vec<&str> = input.split('+').collect();
+        if parts.is_empty() {
+            return false;
+        }
+        
+        // 检查修饰键是否有效
+        let valid_modifiers = ["Ctrl", "Shift", "Alt", "Cmd", "Super"];
+        for part in &parts[..parts.len().saturating_sub(1)] {
+            if !valid_modifiers.contains(part) {
+                return false;
+            }
+        }
+        
+        // 最后一部分应该是主键
+        let key = parts.last().unwrap();
+        !key.trim().is_empty()
     }
 }
 
@@ -559,5 +601,35 @@ impl Language {
             Language::French,
             Language::Spanish,
         ]
+    }
+}
+
+// 标签页相关结构
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tab {
+    pub id: usize,
+    pub title: String,
+    pub content: TabContent,
+    pub closable: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TabContent {
+    Search,
+    Library,
+    Downloads,
+    Settings,
+    PaperView(usize), // Index into saved_papers
+}
+
+impl Tab {
+    pub fn new(id: usize, title: String, content: TabContent) -> Self {
+        let closable = !matches!(content, TabContent::Search | TabContent::Library | TabContent::Downloads | TabContent::Settings);
+        Self {
+            id,
+            title,
+            content,
+            closable,
+        }
     }
 }

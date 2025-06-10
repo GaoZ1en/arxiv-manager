@@ -31,16 +31,6 @@ pub enum Message {
     DownloadFailed { paper_id: String, error: String },
     SavePaper(ArxivPaper),
     RemovePaper(String),
-    OpenPaperPane(ArxivPaper),
-    // 界面操作
-    CloseFocusedPane,
-    SplitHorizontal,
-    SplitVertical,
-    // 面板导航
-    OpenSearchPane,
-    OpenLibraryPane,
-    OpenDownloadsPane,
-    OpenSettingsPane,
     // 设置消息
     ThemeChanged(crate::core::models::Theme),
     DownloadDirectoryChanged(String),
@@ -60,6 +50,9 @@ pub enum Message {
     ImportSettings,
     // 快捷键设置
     ShortcutChanged { action: String, shortcut: String },
+    ShortcutEditStarted(String), // 开始编辑某个快捷键
+    ShortcutEditCancelled,       // 取消编辑快捷键
+    ShortcutInputChanged(String), // 快捷键输入改变
     ResetShortcuts,
     // 键盘快捷键和命令栏
     ToggleCommandPalette,
@@ -73,9 +66,14 @@ pub enum Message {
     FocusSearchInput,
     QuickSaveCurrentPaper,
     QuickDownloadCurrentPaper,
-    NavigateToNextPane,
-    NavigateToPreviousPane,
     ToggleFullscreen,
+    // 标签页操作
+    TabClicked(usize),
+    TabClose(usize),
+    NewTab(crate::core::models::TabContent),
+    NavigateToNextTab,
+    NavigateToPreviousTab,
+    CloseActiveTab, // 关闭当前活动标签页
 }
 
 #[derive(Debug, Clone)]
