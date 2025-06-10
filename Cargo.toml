@@ -56,6 +56,8 @@ git2 = "0.18"
 
 # XML parsing for arXiv API
 roxmltree = "0.19"
+quick-xml = "0.36"
+serde-xml-rs = "0.6"
 
 # URL manipulation
 url = "2.5"
