@@ -11,3 +11,6 @@ pub const GRUVBOX_TEXT_MUTED: Color = Color::from_rgb(0.66, 0.61, 0.52); // #a89
 pub const GRUVBOX_GREEN: Color = Color::from_rgb(0.72, 0.73, 0.15);   // #b8bb26
 pub const GRUVBOX_RED: Color = Color::from_rgb(0.98, 0.38, 0.37);     // #fb4934
 pub const GRUVBOX_ORANGE: Color = Color::from_rgb(0.80, 0.41, 0.13);  // #cc6d19
+pub const GRUVBOX_BLUE: Color = Color::from_rgb(0.27, 0.53, 0.53);    // #458588
+pub const GRUVBOX_PURPLE: Color = Color::from_rgb(0.69, 0.38, 0.78);  // #b16286
+pub const GRUVBOX_YELLOW: Color = Color::from_rgb(0.98, 0.86, 0.20);  // #fabd2f

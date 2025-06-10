@@ -3,7 +3,7 @@
 use iced::widget::pane_grid;
 use std::path::PathBuf;
 
-use crate::models::ArxivPaper;
+use crate::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -14,6 +14,17 @@ pub enum Message {
     SearchQueryChanged(String),
     SearchSubmitted,
     SearchCompleted(Result<Vec<ArxivPaper>, String>),
+    // 高级搜索消息
+    AdvancedSearchToggled,
+    SearchFieldChanged(SearchField),
+    CategoryToggled(String),
+    DateRangeChanged(DateRange),
+    SortByChanged(SortBy),
+    SortOrderChanged(SortOrder),
+    MaxResultsChanged(String),
+    AuthorAdded(String),
+    AuthorRemoved(usize),
+    // 下载和保存操作
     DownloadPaper(ArxivPaper),
     DownloadProgress { paper_id: String, progress: f32 },
     DownloadCompleted { paper_id: String, file_path: PathBuf },
@@ -21,7 +32,25 @@ pub enum Message {
     SavePaper(ArxivPaper),
     RemovePaper(String),
     OpenPaperPane(ArxivPaper),
+    // 界面操作
     CloseFocusedPane,
     SplitHorizontal,
     SplitVertical,
+    // 设置消息
+    ThemeChanged(crate::models::Theme),
+    DownloadDirectoryChanged(String),
+    AutoDownloadToggled,
+    MaxConcurrentDownloadsChanged(String),
+    ShowAbstractsToggled,
+    DefaultSearchFieldChanged(SearchField),
+    DefaultSortByChanged(SortBy),
+    DefaultSortOrderChanged(SortOrder),
+    DefaultMaxResultsChanged(String),
+    AutoSaveSearchesToggled,
+    NotificationToggled,
+    CheckUpdatesToggled,
+    LanguageChanged(crate::models::Language),
+    ResetSettings,
+    ExportSettings,
+    ImportSettings,
 }

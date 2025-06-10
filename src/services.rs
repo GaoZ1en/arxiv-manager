@@ -1,7 +1,101 @@
 // 外部服务和异步函数
 
 use std::path::PathBuf;
-use crate::models::ArxivPaper;
+use crate::models::{ArxivPaper, SearchConfig, DateRange};
+
+// 高级搜索 arXiv 论文
+pub async fn search_arxiv_papers_advanced(config: SearchConfig) -> Result<Vec<ArxivPaper>, String> {
+    if config.query.trim().is_empty() {
+        return Ok(vec![]);
+    }
+
+    let mut query_parts = Vec::new();
+    
+    // 基础查询
+    let search_field = config.search_in.as_str();
+    query_parts.push(format!("{}:{}", search_field, config.query));
+    
+    // 添加作者过滤
+    for author in &config.authors {
+        query_parts.push(format!("au:{}", author));
+    }
+    
+    // 添加分类过滤
+    for category in &config.categories {
+        query_parts.push(format!("cat:{}", category));
+    }
+    
+    // 构建最终查询字符串
+    let search_query = query_parts.join(" AND ");
+    let encoded_query = urlencoding::encode(&search_query);
+    
+    // 构建URL
+    let mut url = format!(
+        "https://export.arxiv.org/api/query?search_query={}&start=0&max_results={}",
+        encoded_query, config.max_results
+    );
+    
+    // 添加排序参数
+    url.push_str(&format!(
+        "&sortBy={}&sortOrder={}",
+        config.sort_by.as_str(),
+        config.sort_order.as_str()
+    ));
+    
+    // 添加日期过滤（如果需要）
+    if let DateRange::Custom { from, to } = &config.date_range {
+        // arXiv API对日期过滤的支持有限，这里可以在结果中进行后处理
+        url.push_str(&format!("&submittedDate:[{}+TO+{}]", from, to));
+    }
+
+    // 发送HTTP请求
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .header("User-Agent", "ArxivManager/1.0")
+        .send()
+        .await
+        .map_err(|e| format!("网络请求失败: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("API请求失败，状态码: {}", response.status()));
+    }
+
+    let xml_content = response
+        .text()
+        .await
+        .map_err(|e| format!("读取响应内容失败: {}", e))?;
+
+    // 解析XML响应
+    let mut papers = parse_arxiv_xml(&xml_content)?;
+    
+    // 应用日期过滤（后处理）
+    if let DateRange::LastWeek | DateRange::LastMonth | DateRange::LastYear = config.date_range {
+        papers = filter_papers_by_date(papers, &config.date_range);
+    }
+    
+    Ok(papers)
+}
+
+// 根据日期范围过滤论文
+fn filter_papers_by_date(papers: Vec<ArxivPaper>, date_range: &DateRange) -> Vec<ArxivPaper> {
+    use chrono::{DateTime, Utc, Duration};
+    
+    let cutoff_date = match date_range {
+        DateRange::LastWeek => Utc::now() - Duration::weeks(1),
+        DateRange::LastMonth => Utc::now() - Duration::weeks(4),
+        DateRange::LastYear => Utc::now() - Duration::weeks(52),
+        _ => return papers,
+    };
+    
+    papers.into_iter().filter(|paper| {
+        if let Ok(published_date) = DateTime::parse_from_rfc3339(&paper.published) {
+            published_date.with_timezone(&Utc) > cutoff_date
+        } else {
+            true // 如果无法解析日期，保留论文
+        }
+    }).collect()
+}
 
 // 异步搜索 arXiv 论文 - 真实API实现
 pub async fn search_arxiv_papers(query: String) -> Result<Vec<ArxivPaper>, String> {
