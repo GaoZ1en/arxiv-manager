@@ -5,6 +5,7 @@ pub mod messages;
 pub mod app_state;
 pub mod arxiv_api;
 pub mod types;
+pub mod handlers;
 
 // 重新导出主要类型
 pub use models::*;

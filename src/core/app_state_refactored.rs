@@ -2,13 +2,16 @@
 // 使用处理器模式将巨大的update方法分解为专门的处理器
 
 use std::time::Instant;
-use iced::{Task, Subscription};
+use iced::{Task, Subscription, Event};
+use iced::keyboard::{Key, Modifiers};
 
-use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent};
+use crate::core::{ArxivPaper, DownloadItem, DownloadStatus, SearchConfig, AppSettings, Tab, TabContent};
 use crate::core::messages::{Message, Command};
+use crate::search::services::{search_arxiv_papers_advanced, download_pdf};
 
 // 导入所有处理器
-use crate::core::handlers::{
+mod handlers;
+use handlers::{
     TabHandler, SearchHandler, DownloadHandler, SettingsHandler, 
     CommandHandler, PaperHandler, ShortcutHandler
 };
@@ -99,22 +102,20 @@ impl ArxivManager {
             Message::AuthorAdded(author) => self.handle_author_added(author),
             Message::AuthorRemoved(index) => self.handle_author_removed(index),
 
-            // 论文相关消息 - 委托给 PaperHandler  
-            Message::SavePaper(paper) => self.handle_paper_save(paper),
-            Message::RemovePaper(paper_id) => {
-                // 根据paper_id找到索引并删除
-                if let Some(index) = self.saved_papers.iter().position(|p| p.id == paper_id) {
-                    self.handle_paper_remove(index)
-                } else {
-                    Task::none()
-                }
-            },
+            // 论文相关消息 - 委托给 PaperHandler
+            Message::PaperSave(paper) => self.handle_paper_save(paper),
+            Message::PaperRemove(index) => self.handle_paper_remove(index),
+            Message::PaperView(paper) => self.handle_paper_view(paper),
+            Message::PaperExport(format) => self.handle_paper_export(format),
 
             // 下载相关消息 - 委托给 DownloadHandler
             Message::DownloadPaper(paper) => self.handle_download_paper(paper),
-            Message::DownloadProgress { paper_id, progress } => self.handle_download_progress(paper_id, progress),
-            Message::DownloadCompleted { paper_id, file_path } => self.handle_download_completed(paper_id, file_path.to_string_lossy().to_string()),
-            Message::DownloadFailed { paper_id, error } => self.handle_download_failed(paper_id, error),
+            Message::DownloadCancel(paper_id) => self.handle_download_cancel(paper_id),
+            Message::DownloadRetry(paper_id) => self.handle_download_retry(paper_id),
+            Message::DownloadProgress(paper_id, progress) => self.handle_download_progress(paper_id, progress),
+            Message::DownloadCompleted(paper_id, file_path) => self.handle_download_completed(paper_id, file_path),
+            Message::DownloadFailed(paper_id, error) => self.handle_download_failed(paper_id, error),
+            Message::DownloadClearCompleted => self.handle_download_clear_completed(),
 
             // 设置相关消息 - 委托给 SettingsHandler
             Message::ThemeChanged(theme) => self.handle_theme_changed(theme),
@@ -130,51 +131,132 @@ impl ArxivManager {
             Message::AutoSaveSearchesToggled => self.handle_auto_save_searches_toggled(),
             Message::NotificationToggled => self.handle_notification_toggled(),
             Message::CheckUpdatesToggled => self.handle_check_updates_toggled(),
-            Message::ResetSettings => self.handle_settings_reset(),
-            Message::ExportSettings => self.handle_settings_export(),
-            Message::ImportSettings => self.handle_settings_import("".to_string()),
+            Message::SettingsReset => self.handle_settings_reset(),
+            Message::SettingsExport => self.handle_settings_export(),
+            Message::SettingsImport(path) => self.handle_settings_import(path),
 
             // 命令面板相关消息 - 委托给 CommandHandler
-            Message::ToggleCommandPalette => self.handle_command_palette_toggled(),
-            Message::CommandPaletteInputChanged(input) => self.handle_command_input_changed(input),
+            Message::CommandPaletteToggled => self.handle_command_palette_toggled(),
+            Message::CommandInputChanged(input) => self.handle_command_input_changed(input),
             Message::CommandSelected(index) => self.handle_command_selected(index),
-            Message::ExecuteCommand(command) => self.handle_command_executed(command),
+            Message::CommandExecuted(command) => self.handle_command_executed(command),
             Message::SidebarToggled => self.handle_sidebar_toggled(),
 
             // 快捷键相关消息 - 委托给 ShortcutHandler
             Message::ShortcutEditStarted(action) => self.handle_shortcut_edit_started(action),
             Message::ShortcutEditCancelled => self.handle_shortcut_edit_cancelled(),
             Message::ShortcutInputChanged(input) => self.handle_shortcut_input_changed(input),
-            Message::ResetShortcuts => self.handle_shortcuts_reset(),
+            Message::ShortcutConfirmed => self.handle_shortcut_confirmed(),
+            Message::ShortcutsReset => self.handle_shortcuts_reset(),
 
-            // 其他消息
-            _ => Task::none(), // 默认情况下不做任何操作
+            // 键盘输入处理
+            Message::KeyPressed(key, modifiers) => self.handle_key_pressed(key, modifiers),
         }
     }
 
-    // 辅助方法：获取当前选中的论文
-    pub fn get_current_paper(&self) -> Option<ArxivPaper> {
-        if let Some(tab) = self.tabs.get(self.active_tab) {
-            match &tab.content {
-                TabContent::Search => {
-                    // 在搜索结果中找到选中的论文（这里简化为返回第一个）
-                    self.search_results.first().cloned()
-                }
-                TabContent::Library => {
-                    // 在论文库中找到选中的论文（这里简化为返回第一个）
-                    self.saved_papers.first().cloned()
-                }
-                _ => None,
-            }
-        } else {
-            None
+    // 键盘输入处理（保留在主文件中，因为它需要协调多个处理器）
+    fn handle_key_pressed(&mut self, key: Key, modifiers: Modifiers) -> Task<Message> {
+        // 构建当前按键组合的字符串表示
+        let mut key_combo = Vec::new();
+        
+        if modifiers.control() {
+            key_combo.push("Ctrl");
         }
+        if modifiers.shift() {
+            key_combo.push("Shift");
+        }
+        if modifiers.alt() {
+            key_combo.push("Alt");
+        }
+        if modifiers.logo() {
+            key_combo.push("Super");
+        }
+        
+        let key_str = match key {
+            Key::Character(c) => c.to_uppercase(),
+            Key::Named(named_key) => format!("{:?}", named_key),
+            _ => return Task::none(),
+        };
+        
+        key_combo.push(&key_str);
+        let current_shortcut = key_combo.join("+");
+        
+        // 检查是否匹配任何已配置的快捷键
+        let shortcuts = &self.settings.shortcuts;
+        
+        if current_shortcut == shortcuts.toggle_command_palette.display {
+            return self.update(Message::CommandPaletteToggled);
+        }
+        if current_shortcut == shortcuts.focus_search.display {
+            // TODO: 聚焦搜索框
+        }
+        if current_shortcut == shortcuts.quick_save_paper.display {
+            if let Some(paper) = self.get_current_paper() {
+                return self.update(Message::PaperSave(paper));
+            }
+        }
+        if current_shortcut == shortcuts.quick_download_paper.display {
+            if let Some(paper) = self.get_current_paper() {
+                return self.update(Message::DownloadPaper(paper));
+            }
+        }
+        if current_shortcut == shortcuts.toggle_sidebar.display {
+            return self.update(Message::SidebarToggled);
+        }
+        if current_shortcut == shortcuts.next_tab.display {
+            return self.update(Message::NavigateToNextTab);
+        }
+        if current_shortcut == shortcuts.previous_tab.display {
+            return self.update(Message::NavigateToPreviousTab);
+        }
+        if current_shortcut == shortcuts.close_tab.display {
+            return self.update(Message::CloseActiveTab);
+        }
+        if current_shortcut == shortcuts.new_tab.display {
+            return self.update(Message::NewTab(TabContent::Search));
+        }
+        if current_shortcut == shortcuts.go_to_search.display {
+            if let Some(index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Search)) {
+                return self.update(Message::TabClicked(index));
+            } else {
+                return self.update(Message::NewTab(TabContent::Search));
+            }
+        }
+        if current_shortcut == shortcuts.go_to_library.display {
+            if let Some(index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Library)) {
+                return self.update(Message::TabClicked(index));
+            } else {
+                return self.update(Message::NewTab(TabContent::Library));
+            }
+        }
+        if current_shortcut == shortcuts.go_to_downloads.display {
+            if let Some(index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Downloads)) {
+                return self.update(Message::TabClicked(index));
+            } else {
+                return self.update(Message::NewTab(TabContent::Downloads));
+            }
+        }
+        if current_shortcut == shortcuts.go_to_settings.display {
+            if let Some(index) = self.tabs.iter().position(|tab| matches!(tab.content, TabContent::Settings)) {
+                return self.update(Message::TabClicked(index));
+            } else {
+                return self.update(Message::NewTab(TabContent::Settings));
+            }
+        }
+        
+        Task::none()
     }
 
     // 订阅和主题方法保持不变
     pub fn subscription(&self) -> Subscription<Message> {
-        // 暂时返回空订阅，因为KeyPressed消息在当前枚举中不存在
-        Subscription::none()
+        iced::event::listen().map(|event| {
+            if let Event::Keyboard(iced::keyboard::Event::KeyPressed { key, modifiers, .. }) = event {
+                Message::KeyPressed(key, modifiers)
+            } else {
+                // 对于其他事件，我们需要一个默认消息
+                Message::SearchQueryChanged(String::new()) // 临时的默认消息
+            }
+        })
     }
 
     pub fn theme(&self) -> iced::Theme {
