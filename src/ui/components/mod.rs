@@ -1,9 +1,0 @@
-pub mod sidebar;
-pub mod search_view;
-pub mod library_view;
-pub mod downloads_view;
-pub mod settings_view;
-pub mod reader_view;
-pub mod status_bar;
-pub mod paper_card;
-pub mod download_item;
