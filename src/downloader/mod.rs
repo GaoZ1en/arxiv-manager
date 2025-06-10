@@ -88,7 +88,7 @@ impl DownloadManager {
                     let db = self.database.lock().await;
                     db.update_download_status(
                         &arxiv_id, 
-                        DownloadStatus::Downloaded, 
+                        DownloadStatus::Completed, 
                         Some(path.to_string_lossy().as_ref())
                     )?;
                 }
@@ -102,7 +102,7 @@ impl DownloadManager {
                 // Update database on failure
                 {
                     let db = self.database.lock().await;
-                    db.update_download_status(&arxiv_id, DownloadStatus::Failed, None)?;
+                    db.update_download_status(&arxiv_id, DownloadStatus::Failed(e.to_string()), None)?;
                 }
                 
                 let _ = self.event_tx.send(DownloadEvent::Failed {

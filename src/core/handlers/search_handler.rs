@@ -4,7 +4,7 @@
 use iced::Task;
 
 use crate::core::{ArxivManager, Message, ArxivPaper, SearchField, DateRange, SortBy, SortOrder};
-use crate::search::services::search_arxiv_papers_advanced;
+use crate::search::api::client::search_arxiv_papers_advanced;
 
 pub trait SearchHandler {
     fn handle_search_query_changed(&mut self, query: String) -> Task<Message>;
