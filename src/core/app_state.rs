@@ -428,6 +428,10 @@ impl ArxivManager {
                 // TODO: 实现全屏切换
                 Task::none()
             }
+            Message::NoOp => {
+                // 占位符消息，不执行任何操作
+                Task::none()
+            }
         }
     }
 
@@ -516,10 +520,10 @@ impl ArxivManager {
                         (Key::Character("4"), Modifiers::CTRL) => {
                             Message::OpenSettingsPane
                         }
-                        _ => return Message::ClearCommandPalette, // 占位消息，不会实际处理
+                        _ => Message::NoOp, // 不匹配的按键使用NoOp
                     }
                 }
-                _ => Message::ClearCommandPalette, // 占位消息，不会实际处理
+                _ => Message::NoOp, // 非键盘事件使用NoOp
             }
         })
     }

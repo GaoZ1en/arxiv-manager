@@ -67,6 +67,8 @@ pub enum Message {
     CommandSelected(usize),
     ExecuteCommand(Command),
     ClearCommandPalette,
+    // No operation message (used as placeholder)
+    NoOp,
     // 快捷键操作
     FocusSearchInput,
     QuickSaveCurrentPaper,
