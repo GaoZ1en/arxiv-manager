@@ -1,0 +1,64 @@
+[package]
+name = "arxiv-manager"
+version = "0.1.0"
+edition = "2021"
+authors = ["koishi"]
+description = "A comprehensive arXiv paper management tool"
+license = "MIT"
+
+[dependencies]
+# GUI Framework
+iced = { version = "0.13", features = ["tokio", "svg", "image"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Configuration
+toml = "0.8"
+
+# PDF processing
+pdf = "0.8"
+
+# Search engine
+tantivy = "0.22"
+
+# File utilities
+dirs = "5.0"
+uuid = { version = "1.8", features = ["v4"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Git integration
+git2 = "0.18"
+
+# XML parsing for arXiv API
+roxmltree = "0.19"
+
+# URL manipulation
+url = "2.5"
+urlencoding = "2.1"
+
+# Futures utilities
+futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3.10"
