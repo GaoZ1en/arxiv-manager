@@ -36,6 +36,11 @@ pub enum Message {
     CloseFocusedPane,
     SplitHorizontal,
     SplitVertical,
+    // 面板导航
+    OpenSearchPane,
+    OpenLibraryPane,
+    OpenDownloadsPane,
+    OpenSettingsPane,
     // 设置消息
     ThemeChanged(crate::models::Theme),
     DownloadDirectoryChanged(String),

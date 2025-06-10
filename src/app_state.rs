@@ -252,6 +252,19 @@ impl ArxivManager {
                 }
                 Task::none()
             }
+            // 面板导航消息处理
+            Message::OpenSearchPane => {
+                self.open_pane(PaneType::Search, "Search".to_string())
+            }
+            Message::OpenLibraryPane => {
+                self.open_pane(PaneType::Library, "Library".to_string())
+            }
+            Message::OpenDownloadsPane => {
+                self.open_pane(PaneType::Downloads, "Downloads".to_string())
+            }
+            Message::OpenSettingsPane => {
+                self.open_pane(PaneType::Settings, "Settings".to_string())
+            }
             // 设置消息处理
             Message::ThemeChanged(theme) => {
                 self.settings.theme = theme;
@@ -326,5 +339,23 @@ impl ArxivManager {
 
     pub fn theme(&self) -> iced::Theme {
         iced::Theme::Dark
+    }
+
+    // 辅助方法：打开新面板
+    fn open_pane(&mut self, pane_type: PaneType, title: String) -> Task<Message> {
+        let new_pane = Pane { pane_type, title };
+        
+        let target_pane = if let Some(focus) = self.focus {
+            Some(focus)
+        } else {
+            // 获取第一个面板的ID
+            self.panes.iter().next().map(|(id, _)| *id)
+        };
+        
+        if let Some(pane_id) = target_pane {
+            let _ = self.panes.split(pane_grid::Axis::Vertical, pane_id, new_pane);
+        }
+        
+        Task::none()
     }
 }

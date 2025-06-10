@@ -72,6 +72,27 @@ impl ArxivManager {
             .on_press(Message::SidebarToggled)
             .style(button_secondary_style);
 
+        // 导航按钮
+        let navigation_buttons = column![
+            button(text("🔍 Search").color(GRUVBOX_TEXT))
+                .on_press(Message::OpenSearchPane)
+                .width(Length::Fill)
+                .style(button_secondary_style),
+            button(text("📚 Library").color(GRUVBOX_TEXT))
+                .on_press(Message::OpenLibraryPane)
+                .width(Length::Fill)
+                .style(button_secondary_style),
+            button(text("📥 Downloads").color(GRUVBOX_TEXT))
+                .on_press(Message::OpenDownloadsPane)
+                .width(Length::Fill)
+                .style(button_secondary_style),
+            button(text("⚙️ Settings").color(GRUVBOX_TEXT))
+                .on_press(Message::OpenSettingsPane)
+                .width(Length::Fill)
+                .style(button_secondary_style),
+        ]
+        .spacing(8);
+
         let pane_controls = column![
             button(text("Split Horizontal").color(GRUVBOX_TEXT))
                 .on_press(Message::SplitHorizontal)
@@ -106,6 +127,9 @@ impl ArxivManager {
                 horizontal_rule(2),
                 text("Saved Papers").color(GRUVBOX_TEXT).size(16),
                 saved_papers_list,
+                horizontal_rule(2),
+                text("Navigation").color(GRUVBOX_TEXT).size(16),
+                navigation_buttons,
             ]
             .spacing(16)
             .padding(16)
