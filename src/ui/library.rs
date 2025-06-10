@@ -4,14 +4,14 @@ use crate::app::{AppMessage, AppState};
 use crate::database::{PaperRecord, DownloadStatus};
 
 pub fn library_view(state: &AppState) -> Element<AppMessage> {
-    let title = text("论文库")
+    let title = text("Paper Library")
         .size(24);
     
-    let stats = format!("共 {} 篇论文", state.recent_papers.len());
+    let stats = format!("Total {} papers", state.recent_papers.len());
     let stats_text = text(stats).size(16);
     
     let papers_list = if state.recent_papers.is_empty() {
-        column![text("论文库为空，请先搜索并下载论文").size(16)]
+        column![text("Library is empty, please search and download papers first").size(16)]
     } else {
         let mut papers = column![]
             .spacing(10);

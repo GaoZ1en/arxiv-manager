@@ -6,9 +6,13 @@ authors = ["koishi"]
 description = "A comprehensive arXiv paper management tool"
 license = "MIT"
 
+[[bin]]
+name = "arxiv_manager"
+path = "src/main.rs"
+
 [dependencies]
 # GUI Framework
-iced = { version = "0.13", features = ["tokio", "svg", "image"] }
+iced = { version = "0.13.0", features = ["tokio", "svg", "image", "advanced"] }
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
