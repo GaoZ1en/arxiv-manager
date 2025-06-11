@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message, Theme, Language, SearchField, SortBy, SortOrder};
+use crate::core::{ArxivManager, Message};
+use crate::core::models::{Theme, Language, SearchField, SortBy, SortOrder};
 
 pub trait SettingsHandler {
     fn handle_theme_changed(&mut self, theme: Theme) -> Task<Message>;
