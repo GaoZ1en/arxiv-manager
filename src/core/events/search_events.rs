@@ -106,6 +106,7 @@ pub enum SearchErrorType {
 }
 
 /// 搜索历史事件
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SearchHistoryEvent {
     /// 添加到历史
@@ -163,6 +164,7 @@ pub enum SearchFilterEvent {
 }
 
 /// 搜索导出事件
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SearchExportEvent {
     /// 导出搜索结果请求
@@ -216,6 +218,7 @@ pub enum ExportFormat {
 }
 
 /// 搜索统计事件
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SearchStatisticsEvent {
     /// 统计数据更新
@@ -289,9 +292,13 @@ pub enum SearchEventError {
 
 /// 搜索事件构建器
 pub struct SearchEventBuilder {
+    #[allow(dead_code)]
     query: Option<String>,
+    #[allow(dead_code)]
     timestamp: Option<chrono::DateTime<chrono::Utc>>,
+    #[allow(dead_code)]
     error_type: Option<SearchErrorType>,
+    #[allow(dead_code)]
     results: Option<Vec<ArxivPaper>>,
 }
 
@@ -378,8 +385,11 @@ impl Default for SearchEventBuilder {
 
 /// 搜索事件聚合器
 pub struct SearchEventAggregator {
+    #[allow(dead_code)]
     events: Vec<SearchEvent>,
+    #[allow(dead_code)]
     start_time: Option<chrono::DateTime<chrono::Utc>>,
+    #[allow(dead_code)]
     query: Option<String>,
 }
 

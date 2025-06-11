@@ -5,6 +5,7 @@ use tokio::fs;
 use crate::core::models::ArxivPaper;
 
 /// 下载arXiv论文的PDF文件
+#[allow(dead_code)]
 pub async fn download_pdf(paper: ArxivPaper) -> Result<(String, PathBuf), (String, String)> {
     // 创建下载目录
     let downloads_dir = PathBuf::from("downloads");
@@ -66,17 +67,20 @@ pub async fn download_pdf(paper: ArxivPaper) -> Result<(String, PathBuf), (Strin
 }
 
 /// 检查PDF文件是否已经下载
+#[allow(dead_code)]
 pub async fn is_pdf_downloaded(paper_id: &str) -> bool {
     let file_path = PathBuf::from("downloads").join(format!("{}.pdf", paper_id));
     file_path.exists()
 }
 
 /// 获取已下载PDF文件的路径
+#[allow(dead_code)]
 pub fn get_pdf_path(paper_id: &str) -> PathBuf {
     PathBuf::from("downloads").join(format!("{}.pdf", paper_id))
 }
 
 /// 删除已下载的PDF文件
+#[allow(dead_code)]
 pub async fn delete_pdf(paper_id: &str) -> Result<(), String> {
     let file_path = get_pdf_path(paper_id);
     if file_path.exists() {

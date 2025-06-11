@@ -8,11 +8,15 @@ use chrono::{DateTime, Utc};
 // 临时类型定义以避免循环导入
 #[derive(Debug, Clone)]
 pub struct DownloadTask {
+    #[allow(dead_code)]
     pub paper: ArxivPaper,
+    #[allow(dead_code)]
     pub output_path: PathBuf,
+    #[allow(dead_code)]
     pub priority: Priority,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Low = 0,
@@ -22,6 +26,7 @@ pub enum Priority {
 
 #[derive(Debug)]
 pub struct DownloadQueue {
+    #[allow(dead_code)]
     tasks: Vec<DownloadTask>,
 }
 
@@ -32,15 +37,18 @@ impl DownloadQueue {
         }
     }
     
+    #[allow(dead_code)]
     pub fn add_task(&mut self, task: DownloadTask) {
         self.tasks.push(task);
         self.tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
     }
     
+    #[allow(dead_code)]
     pub fn next_task(&mut self) -> Option<DownloadTask> {
         self.tasks.pop()
     }
     
+    #[allow(dead_code)]
     pub fn remove_task(&mut self, arxiv_id: &str) -> Option<DownloadTask> {
         if let Some(index) = self.tasks.iter().position(|t| t.paper.id == arxiv_id) {
             Some(self.tasks.remove(index))
@@ -49,14 +57,17 @@ impl DownloadQueue {
         }
     }
     
+    #[allow(dead_code)]
     pub fn contains_task(&self, arxiv_id: &str) -> bool {
         self.tasks.iter().any(|task| task.paper.id == arxiv_id)
     }
     
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }
     
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.tasks.len()
     }
@@ -72,9 +83,11 @@ impl Default for DownloadQueue {
 #[derive(Debug)]
 pub struct DownloadState {
     /// 下载队列
+    #[allow(dead_code)]
     pub queue: DownloadQueue,
     
     /// 活跃下载进度 (arxiv_id -> 进度信息)
+    #[allow(dead_code)]
     pub active_downloads: HashMap<String, DownloadProgress>,
     
     /// 已完成的下载 (arxiv_id -> 下载结果)
@@ -122,6 +135,7 @@ pub struct DownloadProgress {
 }
 
 /// 下载状态
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum DownloadStatus {
     Queued,
@@ -136,24 +150,31 @@ pub enum DownloadStatus {
 #[derive(Debug, Clone)]
 pub struct DownloadResult {
     /// ArXiv ID
+    #[allow(dead_code)]
     pub arxiv_id: String,
     
     /// 下载的文件路径
+    #[allow(dead_code)]
     pub file_path: PathBuf,
     
     /// 文件大小
+    #[allow(dead_code)]
     pub file_size: u64,
     
     /// 完成时间
+    #[allow(dead_code)]
     pub completed_at: DateTime<Utc>,
     
     /// 下载耗时（毫秒）
+    #[allow(dead_code)]
     pub download_time_ms: u64,
     
     /// 平均下载速度（字节/秒）
+    #[allow(dead_code)]
     pub average_speed_bps: u64,
     
     /// 论文信息
+    #[allow(dead_code)]
     pub paper: ArxivPaper,
 }
 
@@ -161,21 +182,27 @@ pub struct DownloadResult {
 #[derive(Debug, Clone)]
 pub struct DownloadError {
     /// ArXiv ID
+    #[allow(dead_code)]
     pub arxiv_id: String,
     
     /// 错误消息
+    #[allow(dead_code)]
     pub error_message: String,
     
     /// 错误类型
+    #[allow(dead_code)]
     pub error_type: DownloadErrorType,
     
     /// 发生时间
+    #[allow(dead_code)]
     pub occurred_at: DateTime<Utc>,
     
     /// 重试次数
+    #[allow(dead_code)]
     pub retry_count: u32,
     
     /// 是否可以重试
+    #[allow(dead_code)]
     pub can_retry: bool,
 }
 

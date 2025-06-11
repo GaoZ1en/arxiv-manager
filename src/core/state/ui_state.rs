@@ -9,6 +9,7 @@ pub struct UiState {
     // 标签页状态
     pub tabs: Vec<Tab>,
     pub active_tab: usize,
+    #[allow(dead_code)]
     pub next_tab_id: usize,
     
     // 界面显示状态
@@ -22,13 +23,16 @@ pub struct UiState {
     pub selected_command_index: Option<usize>,
     
     // 快捷键编辑状态
+    #[allow(dead_code)]
     pub editing_shortcut: Option<String>,
+    #[allow(dead_code)]
     pub shortcut_input: String,
     
     // 交互状态
     pub last_interaction: Option<Instant>,
     
     // 应用设置
+    #[allow(dead_code)]
     pub settings: AppSettings,
 }
 

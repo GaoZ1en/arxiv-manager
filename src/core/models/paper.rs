@@ -37,7 +37,7 @@ pub enum DownloadStatus {
     Pending,
     Downloading,
     Completed,
-    Failed(String),
+    Failed(#[allow(dead_code)] String),
 }
 
 // 常用的arXiv分类 - 为理论物理工作者优化

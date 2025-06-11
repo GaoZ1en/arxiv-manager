@@ -12,6 +12,7 @@ pub struct ArxivClient {
 }
 
 impl ArxivClient {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             client: Client::new(),
@@ -19,6 +20,7 @@ impl ArxivClient {
         }
     }
     
+    #[allow(dead_code)]
     pub async fn search(&self, query: &SearchQuery) -> Result<Vec<ArxivPaper>> {
         let url = self.build_search_url(query);
         
@@ -38,6 +40,7 @@ impl ArxivClient {
         self.parse_search_response(&xml_content)
     }
     
+    #[allow(dead_code)]
     pub async fn get_paper_by_id(&self, arxiv_id: &str) -> Result<Option<ArxivPaper>> {
         let query = SearchQuery {
             query: format!("id:{}", arxiv_id),
@@ -51,6 +54,7 @@ impl ArxivClient {
         Ok(papers.pop())
     }
     
+    #[allow(dead_code)]
     fn build_search_url(&self, query: &SearchQuery) -> String {
         let mut params = vec![
             ("search_query", query.query.clone()),
@@ -81,6 +85,7 @@ impl ArxivClient {
         format!("{}?{}", self.base_url, query_string)
     }
     
+    #[allow(dead_code)]
     fn parse_search_response(&self, xml_content: &str) -> Result<Vec<ArxivPaper>> {
         let doc = roxmltree::Document::parse(xml_content)
             .map_err(|e| ArxivError::Xml(e.to_string()))?;
@@ -96,6 +101,7 @@ impl ArxivClient {
         Ok(papers)
     }
     
+    #[allow(dead_code)]
     fn parse_entry_node(&self, entry: &roxmltree::Node) -> Result<Option<ArxivPaper>> {
         let id = self.extract_text(entry, "id")?;
         let title = self.extract_text(entry, "title")?;
@@ -164,6 +170,7 @@ impl ArxivClient {
         }))
     }
     
+    #[allow(dead_code)]
     fn extract_text(&self, entry: &roxmltree::Node, tag: &str) -> Result<String> {
         entry
             .descendants()
@@ -173,6 +180,7 @@ impl ArxivClient {
             .ok_or_else(|| ArxivError::Xml(format!("Missing required field: {}", tag)))
     }
     
+    #[allow(dead_code)]
     fn extract_text_optional(&self, entry: &roxmltree::Node, tag: &str) -> Option<String> {
         entry
             .descendants()
@@ -182,6 +190,7 @@ impl ArxivClient {
             .filter(|s| !s.is_empty())
     }
     
+    #[allow(dead_code)]
     fn extract_date(&self, entry: &roxmltree::Node, tag: &str) -> Result<DateTime<chrono::Utc>> {
         let date_str = self.extract_text(entry, tag)?;
         DateTime::parse_from_rfc3339(&date_str)
@@ -189,6 +198,7 @@ impl ArxivClient {
             .map_err(|e| ArxivError::Xml(format!("Invalid date format for {}: {}", tag, e)))
     }
     
+    #[allow(dead_code)]
     fn clean_arxiv_id(&self, id: &str) -> String {
         // Remove the arXiv URL prefix if present
         id.replace("http://arxiv.org/abs/", "")

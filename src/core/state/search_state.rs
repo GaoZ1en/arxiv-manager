@@ -5,9 +5,13 @@ use crate::core::{ArxivPaper, SearchQuery};
 #[derive(Debug, Clone, PartialEq)]
 pub enum SearchType {
     All,
+    #[allow(dead_code)]
     Title,
+    #[allow(dead_code)]
     Author,
+    #[allow(dead_code)]
     Abstract,
+    #[allow(dead_code)]
     Category,
 }
 
@@ -15,15 +19,20 @@ pub enum SearchType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SortBy {
     Relevance,
+    #[allow(dead_code)]
     Date,
+    #[allow(dead_code)]
     Title,
+    #[allow(dead_code)]
     Author,
 }
 
 /// 日期范围
 #[derive(Debug, Clone)]
 pub struct DateRange {
+    #[allow(dead_code)]
     pub start: chrono::NaiveDate,
+    #[allow(dead_code)]
     pub end: chrono::NaiveDate,
 }
 
@@ -62,21 +71,27 @@ pub struct SearchState {
 #[derive(Debug, Clone)]
 pub struct AdvancedSearchParams {
     /// 最大结果数量
+    #[allow(dead_code)]
     pub max_results: usize,
     
     /// 排序方式
+    #[allow(dead_code)]
     pub sort_by: SortBy,
     
     /// 搜索类型
+    #[allow(dead_code)]
     pub search_type: SearchType,
     
     /// 日期范围过滤
+    #[allow(dead_code)]
     pub date_range: Option<DateRange>,
     
     /// 分类过滤
+    #[allow(dead_code)]
     pub categories: Vec<String>,
     
     /// 作者过滤
+    #[allow(dead_code)]
     pub authors: Vec<String>,
 }
 
@@ -84,18 +99,23 @@ pub struct AdvancedSearchParams {
 #[derive(Debug, Clone, Default)]
 pub struct SearchStats {
     /// 总搜索次数
+    #[allow(dead_code)]
     pub total_searches: u64,
     
     /// 成功搜索次数
+    #[allow(dead_code)]
     pub successful_searches: u64,
     
     /// 失败搜索次数
+    #[allow(dead_code)]
     pub failed_searches: u64,
     
     /// 平均搜索时间（毫秒）
+    #[allow(dead_code)]
     pub average_search_time_ms: u64,
     
     /// 最近搜索时间记录
+    #[allow(dead_code)]
     pub recent_search_times: Vec<u64>,
 }
 

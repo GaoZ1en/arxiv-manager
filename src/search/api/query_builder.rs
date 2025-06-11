@@ -47,6 +47,7 @@ pub fn build_search_url(config: &SearchConfig) -> Result<String, String> {
 }
 
 /// 构建简单查询URL的辅助函数
+#[allow(dead_code)]
 pub fn build_simple_query_url(query: &str, max_results: u32) -> String {
     let encoded_query = urlencoding::encode(query);
     format!(

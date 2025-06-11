@@ -18,8 +18,11 @@ use crate::core::ArxivPaper;
 // 临时类型定义以避免循环导入
 #[derive(Debug, Clone)]
 pub struct PaperRecord {
+    #[allow(dead_code)]
     pub id: i64,
+    #[allow(dead_code)]
     pub arxiv_id: String,
+    #[allow(dead_code)]
     pub title: String,
 }
 
@@ -30,6 +33,7 @@ pub struct Config {
 use std::path::PathBuf;
 
 /// 应用程序主事件类型
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum AppEvent {
     /// 搜索相关事件
@@ -129,6 +133,7 @@ pub enum ConfigEvent {
 }
 
 /// 系统事件
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SystemEvent {
     /// 应用程序启动
@@ -172,6 +177,7 @@ pub enum SystemEvent {
 }
 
 /// 网络状态
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum NetworkStatus {
     Online,
@@ -182,9 +188,13 @@ pub enum NetworkStatus {
 /// 系统错误
 #[derive(Debug, Clone)]
 pub struct SystemError {
+    #[allow(dead_code)]
     pub message: String,
+    #[allow(dead_code)]
     pub error_type: SystemErrorType,
+    #[allow(dead_code)]
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    #[allow(dead_code)]
     pub context: Option<String>,
 }
 
@@ -209,21 +219,27 @@ pub trait EventListener<T> {
 /// 事件总线
 pub struct EventBus {
     /// 搜索事件监听器
+    #[allow(dead_code)]
     search_listeners: Vec<Box<dyn EventListener<SearchEvent>>>,
     
     /// 下载事件监听器
+    #[allow(dead_code)]
     download_listeners: Vec<Box<dyn EventListener<DownloadEvent>>>,
     
     /// UI事件监听器
+    #[allow(dead_code)]
     ui_listeners: Vec<Box<dyn EventListener<UiEvent>>>,
     
     /// 数据库事件监听器
+    #[allow(dead_code)]
     database_listeners: Vec<Box<dyn EventListener<DatabaseEvent>>>,
     
     /// 配置事件监听器
+    #[allow(dead_code)]
     config_listeners: Vec<Box<dyn EventListener<ConfigEvent>>>,
     
     /// 系统事件监听器
+    #[allow(dead_code)]
     system_listeners: Vec<Box<dyn EventListener<SystemEvent>>>,
 }
 
@@ -241,6 +257,7 @@ impl EventBus {
     }
     
     /// 发布事件
+    #[allow(dead_code)]
     pub fn publish(&mut self, event: AppEvent) -> Result<(), Box<dyn std::error::Error>> {
         match event {
             AppEvent::Search(event) => {
@@ -278,31 +295,37 @@ impl EventBus {
     }
     
     /// 添加搜索事件监听器
+    #[allow(dead_code)]
     pub fn add_search_listener(&mut self, listener: Box<dyn EventListener<SearchEvent>>) {
         self.search_listeners.push(listener);
     }
     
     /// 添加下载事件监听器
+    #[allow(dead_code)]
     pub fn add_download_listener(&mut self, listener: Box<dyn EventListener<DownloadEvent>>) {
         self.download_listeners.push(listener);
     }
     
     /// 添加UI事件监听器
+    #[allow(dead_code)]
     pub fn add_ui_listener(&mut self, listener: Box<dyn EventListener<UiEvent>>) {
         self.ui_listeners.push(listener);
     }
     
     /// 添加数据库事件监听器
+    #[allow(dead_code)]
     pub fn add_database_listener(&mut self, listener: Box<dyn EventListener<DatabaseEvent>>) {
         self.database_listeners.push(listener);
     }
     
     /// 添加配置事件监听器
+    #[allow(dead_code)]
     pub fn add_config_listener(&mut self, listener: Box<dyn EventListener<ConfigEvent>>) {
         self.config_listeners.push(listener);
     }
     
     /// 添加系统事件监听器
+    #[allow(dead_code)]
     pub fn add_system_listener(&mut self, listener: Box<dyn EventListener<SystemEvent>>) {
         self.system_listeners.push(listener);
     }
@@ -315,6 +338,7 @@ impl Default for EventBus {
 }
 
 /// 事件处理结果
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum EventResult {
     /// 事件处理成功
@@ -331,6 +355,7 @@ pub enum EventResult {
 }
 
 /// 批量事件处理器
+#[allow(dead_code)]
 pub struct BatchEventProcessor {
     events: Vec<AppEvent>,
     batch_size: usize,

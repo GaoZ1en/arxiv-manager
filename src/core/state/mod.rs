@@ -12,8 +12,11 @@ pub use download_state::DownloadState;
 /// 应用主状态 - 组合所有子状态
 #[derive(Debug)]
 pub struct AppState {
+    #[allow(dead_code)]
     pub ui: UiState,
+    #[allow(dead_code)]
     pub search: SearchState,
+    #[allow(dead_code)]
     pub download: DownloadState,
 }
 

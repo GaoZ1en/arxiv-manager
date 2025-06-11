@@ -5,6 +5,7 @@ use super::query_builder::build_search_url;
 use crate::search::parsers::xml_parser::parse_arxiv_xml;
 
 /// 基础搜索功能 - 简单查询接口
+#[allow(dead_code)]
 pub async fn search_arxiv_papers(query: String) -> Result<Vec<ArxivPaper>, String> {
     if query.trim().is_empty() {
         return Ok(vec![]);

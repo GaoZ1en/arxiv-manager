@@ -27,6 +27,7 @@ pub fn filter_papers_by_date(papers: Vec<ArxivPaper>, date_range: &DateRange) ->
 }
 
 /// 根据自定义日期范围过滤论文
+#[allow(dead_code)]
 pub fn filter_papers_by_custom_date_range(
     papers: Vec<ArxivPaper>, 
     start_date: &str, 
@@ -53,6 +54,7 @@ pub fn filter_papers_by_custom_date_range(
 }
 
 /// 获取论文的发布年份
+#[allow(dead_code)]
 pub fn get_paper_year(paper: &ArxivPaper) -> Option<i32> {
     DateTime::parse_from_rfc3339(&paper.published)
         .ok()
@@ -60,6 +62,7 @@ pub fn get_paper_year(paper: &ArxivPaper) -> Option<i32> {
 }
 
 /// 根据年份过滤论文
+#[allow(dead_code)]
 pub fn filter_papers_by_year(papers: Vec<ArxivPaper>, year: i32) -> Vec<ArxivPaper> {
     papers.into_iter().filter(|paper| {
         get_paper_year(paper).map_or(false, |paper_year| paper_year == year)

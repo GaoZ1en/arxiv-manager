@@ -211,38 +211,46 @@ pub struct UiEventBuilder {
 }
 
 impl UiEventBuilder {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self::default()
     }
 
+    #[allow(dead_code)]
     pub fn event_type(mut self, event_type: impl Into<String>) -> Self {
         self.event_type = Some(event_type.into());
         self
     }
 
+    #[allow(dead_code)]
     pub fn target(mut self, target: impl Into<String>) -> Self {
         self.target = Some(target.into());
         self
     }
 
+    #[allow(dead_code)]
     pub fn data(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.data.insert(key.into(), value.into());
         self
     }
 
+    #[allow(dead_code)]
     pub fn timestamp(mut self, timestamp: SystemTime) -> Self {
         self.timestamp = Some(timestamp);
         self
     }
 
+    #[allow(dead_code)]
     pub fn build_tab_event(self, tab_event: TabEvent) -> UiEvent {
         UiEvent::Tab(tab_event)
     }
 
+    #[allow(dead_code)]
     pub fn build_sidebar_event(self, sidebar_event: SidebarEvent) -> UiEvent {
         UiEvent::Sidebar(sidebar_event)
     }
 
+    #[allow(dead_code)]
     pub fn build_theme_event(self, theme_event: ThemeEvent) -> UiEvent {
         UiEvent::Theme(theme_event)
     }
@@ -272,6 +280,7 @@ impl UiEventAggregator {
     }
 
     /// 处理UI事件并更新统计
+    #[allow(dead_code)]
     pub fn handle_event(&mut self, event: &UiEvent) {
         match event {
             UiEvent::Tab(tab_event) => {
@@ -314,6 +323,7 @@ impl UiEventAggregator {
     }
 
     /// 重置统计
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.tab_events.clear();
         self.sidebar_interactions = 0;
@@ -324,6 +334,7 @@ impl UiEventAggregator {
     }
 
     /// 获取最常用的快捷键
+    #[allow(dead_code)]
     pub fn get_most_used_shortcuts(&self, limit: usize) -> Vec<(String, u32)> {
         let mut shortcuts: Vec<_> = self.shortcut_usage.iter()
             .map(|(k, v)| (k.clone(), *v))
@@ -334,6 +345,7 @@ impl UiEventAggregator {
     }
 
     /// 获取标签页使用模式
+    #[allow(dead_code)]
     pub fn get_tab_usage_pattern(&self) -> HashMap<String, f64> {
         let total: u32 = self.tab_events.values().sum();
         if total == 0 {
@@ -367,6 +379,7 @@ pub struct UiEventSession {
 }
 
 impl UiEventSession {
+    #[allow(dead_code)]
     pub fn new(id: String) -> Self {
         Self {
             id,
@@ -377,22 +390,26 @@ impl UiEventSession {
     }
 
     /// 添加事件到会话
+    #[allow(dead_code)]
     pub fn add_event(&mut self, event: UiEvent) {
         self.aggregator.handle_event(&event);
         self.events.push(event);
     }
 
     /// 获取会话持续时间
+    #[allow(dead_code)]
     pub fn duration(&self) -> Duration {
         self.start_time.elapsed().unwrap_or(Duration::ZERO)
     }
 
     /// 获取事件数量
+    #[allow(dead_code)]
     pub fn event_count(&self) -> usize {
         self.events.len()
     }
 
     /// 导出会话数据
+    #[allow(dead_code)]
     pub fn export_session(&self) -> Result<String, Box<dyn std::error::Error>> {
         let session_data = serde_json::to_string_pretty(&SessionExport {
             id: self.id.clone(),
@@ -406,6 +423,7 @@ impl UiEventSession {
 }
 
 /// 会话导出数据结构
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 struct SessionExport<'a> {
     id: String,

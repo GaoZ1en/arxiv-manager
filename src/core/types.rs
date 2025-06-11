@@ -19,6 +19,7 @@ pub struct ArxivPaper {
 
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
+    #[allow(dead_code)]
     pub query: String,
     #[allow(dead_code)]
     pub max_results: usize,
@@ -38,6 +39,7 @@ pub enum SortBy {
     SubmittedDate,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SortOrder {
     Ascending,

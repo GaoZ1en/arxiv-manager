@@ -147,6 +147,7 @@ pub enum DownloadErrorType {
 }
 
 /// 取消原因
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum CancelReason {
     /// 用户手动取消
@@ -169,6 +170,7 @@ pub enum CancelReason {
 }
 
 /// 队列事件
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum QueueEvent {
     /// 任务添加到队列
@@ -211,6 +213,7 @@ pub enum QueueEvent {
 }
 
 /// 出队原因
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum DequeueReason {
     /// 开始下载
@@ -582,6 +585,7 @@ impl DownloadSessionTracker {
     }
     
     /// 开始新的下载会话
+    #[allow(dead_code)]
     pub fn start_session(&mut self, arxiv_id: String, paper: ArxivPaper) {
         let session = DownloadSession {
             arxiv_id: arxiv_id.clone(),
@@ -598,6 +602,7 @@ impl DownloadSessionTracker {
     }
     
     /// 更新会话事件
+    #[allow(dead_code)]
     pub fn add_event(&mut self, arxiv_id: &str, event: DownloadEvent) {
         if let Some(session) = self.sessions.get_mut(arxiv_id) {
             // 根据事件类型更新会话状态
@@ -628,23 +633,25 @@ impl DownloadSessionTracker {
             }
             
             session.events.push(event);
-        }
-    }
+        }    }
     
     /// 获取会话信息
+    #[allow(dead_code)]
     pub fn get_session(&self, arxiv_id: &str) -> Option<&DownloadSession> {
         self.sessions.get(arxiv_id)
     }
     
     /// 获取活跃会话
+    #[allow(dead_code)]
     pub fn get_active_sessions(&self) -> Vec<&DownloadSession> {
         self.sessions
             .values()
             .filter(|session| session.status == DownloadSessionStatus::Active)
             .collect()
     }
-    
+
     /// 清理已完成的会话
+    #[allow(dead_code)]
     pub fn cleanup_completed_sessions(&mut self) -> usize {
         let initial_count = self.sessions.len();
         self.sessions.retain(|_, session| {
