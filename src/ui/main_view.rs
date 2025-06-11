@@ -1,24 +1,23 @@
-// 主视图集成文件
+// 现代化主视图 - IRC客户端风格布局
 
 use iced::widget::{column, container, row, stack};
-use iced::{Element, Length};
+use iced::{Element, Length, Padding};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::models::TabContent;
 use crate::core::messages::Message;
 use crate::ui::components::{TabBar, Sidebar, CommandPalette};
 use crate::ui::views::{SearchView, LibraryView, DownloadsView, SettingsView, PaperView};
+use crate::ui::style::{main_container_dynamic_style, chat_container_dynamic_style};
 
 impl ArxivManager {
     pub fn view(&self) -> Element<'_, Message> {
+        // 创建侧边栏 (类似IRC的频道列表)
         let sidebar = if self.sidebar_visible {
             Some(Sidebar::view(self))
         } else {
             None
         };
-
-        // 创建标签栏
-        let tab_bar = TabBar::view(self);
 
         // 获取当前活动标签页的内容
         let current_content = if let Some(current_tab) = self.tabs.get(self.active_tab) {
@@ -29,43 +28,68 @@ impl ArxivManager {
                 TabContent::Settings => SettingsView::view(self),
                 TabContent::PaperView(index) => {
                     if let Some(paper) = self.saved_papers.get(*index) {
-                        PaperView::view(paper)
+                        PaperView::view(paper, &self.settings.theme)
                     } else {
-                        container(iced::widget::text("Paper not found")).into()
+                        container(
+                            iced::widget::text("Paper not found")
+                                .color(crate::ui::theme::TEXT_MUTED)
+                        )
+                        .style(chat_container_dynamic_style(&self.settings.theme))
+                        .into()
                     }
                 }
             }
         } else {
-            container(iced::widget::text("No active tab")).into()
+            container(
+                iced::widget::text("No active tab")
+                    .color(crate::ui::theme::TEXT_MUTED)
+            )
+            .style(chat_container_dynamic_style(&self.settings.theme))
+            .into()
         };
 
-        // 创建主内容区域
-        let main_content = container(
+        // 创建带标签栏的内容区域 (类似IRC的消息区域)
+        let content_area = container(
             column![
-                tab_bar,
-                current_content
+                // 顶部标签栏 (类似IRC的频道标签)
+                container(TabBar::view(self))
+                    .padding(Padding::new(8.0)),
+                
+                // 主内容区域
+                container(current_content)
+                    .padding(Padding::new(12.0))
+                    .height(Length::Fill)
+                    .width(Length::Fill)
+            ]
+        )
+        .style(main_container_dynamic_style(&self.settings.theme))
+        .height(Length::Fill)
+        .width(Length::Fill);
+
+        // 组合侧边栏和内容区域
+        let base_layout: Element<Message> = if let Some(sidebar) = sidebar {
+            row![
+                sidebar,
+                content_area
             ]
             .spacing(0)
-        )
-        .width(Length::Fill)
-        .height(Length::Fill);
-
-        let base_layout = if let Some(sidebar) = sidebar {
-            row![sidebar, main_content]
-                .spacing(0)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into()
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
         } else {
-            main_content.into()
+            content_area.into()
         };
 
-        // 如果命令栏可见，添加覆盖层
+        // 如果命令面板可见，添加覆盖层 (类似IRC的快速搜索)
         if self.command_palette_visible {
             let overlay = CommandPalette::view(self);
-            container(stack![base_layout, overlay]).into()
+            container(stack![base_layout, overlay])
+                .style(main_container_dynamic_style(&self.settings.theme))
+                .into()
         } else {
-            base_layout
+            container(base_layout)
+                .style(main_container_dynamic_style(&self.settings.theme))
+                .into()
         }
     }
 }

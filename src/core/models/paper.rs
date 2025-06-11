@@ -1,7 +1,7 @@
 // 论文相关的数据模型
 use std::path::PathBuf;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ArxivPaper {
     pub id: String,
     pub title: String,

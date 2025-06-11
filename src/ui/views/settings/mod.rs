@@ -17,8 +17,10 @@ pub struct SettingsView;
 impl SettingsView {
     /// 创建设置视图的主界面
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
+        let theme_colors = app.theme_colors();
+        
         let title = text("Settings")
-            .color(GRUVBOX_TEXT)
+            .color(theme_colors.text_primary)
             .size(28);
 
         // 外观设置区域
@@ -45,10 +47,10 @@ impl SettingsView {
             )
         )
         .padding(20)
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(GRUVBOX_BG)),
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(Background::Color(theme_colors.dark_bg)),
             border: Border::default(),
-            text_color: Some(GRUVBOX_TEXT),
+            text_color: Some(theme_colors.text_primary),
             shadow: Shadow::default(),
         })
         .into()

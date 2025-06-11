@@ -209,10 +209,29 @@ impl CommandHandler for ArxivManager {
             Command::ToggleTheme => {
                 use crate::core::models::Theme;
                 self.settings.theme = match self.settings.theme {
-                    Theme::GruvboxDark => Theme::GruvboxLight,
-                    Theme::GruvboxLight => Theme::Dark,
-                    Theme::Dark => Theme::Light,
-                    Theme::Light => Theme::GruvboxDark,
+                    // 在主要暗色主题间循环
+                    Theme::ModernDark => Theme::GruvboxDark,
+                    Theme::GruvboxDark => Theme::CatppuccinMocha,
+                    Theme::CatppuccinMocha => Theme::Dracula,
+                    Theme::Dracula => Theme::Nord,
+                    Theme::Nord => Theme::OneDark,
+                    Theme::OneDark => Theme::Dark,
+                    Theme::Dark => Theme::ModernDark,
+                    
+                    // 浅色主题间循环
+                    Theme::ModernLight => Theme::GruvboxLight,
+                    Theme::GruvboxLight => Theme::CatppuccinLatte,
+                    Theme::CatppuccinLatte => Theme::SolarizedLight,
+                    Theme::SolarizedLight => Theme::OneLight,
+                    Theme::OneLight => Theme::Light,
+                    Theme::Light => Theme::ModernLight,
+                    
+                    // 其他主题默认切换到Modern主题
+                    _ => if self.settings.theme.is_dark() { 
+                        Theme::ModernDark 
+                    } else { 
+                        Theme::ModernLight 
+                    },
                 };
                 Task::none()
             }

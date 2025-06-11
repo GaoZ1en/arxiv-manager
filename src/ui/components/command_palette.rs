@@ -11,6 +11,8 @@ pub struct CommandPalette;
 
 impl CommandPalette {
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
+        let theme_colors = app.theme_colors();
+        
         // 命令栏主体
         let command_input = text_input("Type a command...", &app.command_palette_input)
             .on_input(Message::CommandPaletteInputChanged)
@@ -24,20 +26,20 @@ impl CommandPalette {
                 Message::ClearCommandPalette
             })
             .size(18)
-            .style(|_theme, status| iced::widget::text_input::Style {
-                background: Background::Color(GRUVBOX_SURFACE),
+            .style(move |_theme, status| iced::widget::text_input::Style {
+                background: Background::Color(theme_colors.dark_bg_secondary),
                 border: Border {
                     color: match status {
-                        iced::widget::text_input::Status::Focused => GRUVBOX_GREEN,
-                        _ => GRUVBOX_BORDER,
+                        iced::widget::text_input::Status::Focused => theme_colors.accent_border,
+                        _ => theme_colors.border_color,
                     },
                     width: 2.0,
                     radius: 6.0.into(),
                 },
                 icon: Color::TRANSPARENT,
-                placeholder: GRUVBOX_TEXT_MUTED,
-                value: GRUVBOX_TEXT,
-                selection: GRUVBOX_GREEN,
+                placeholder: theme_colors.text_muted,
+                value: theme_colors.text_primary,
+                selection: theme_colors.accent_border,
             });
 
         // 命令建议列表
@@ -49,11 +51,11 @@ impl CommandPalette {
                     let command_button = button(
                         row![
                             text(command.display_name())
-                                .color(if is_selected { Color::BLACK } else { GRUVBOX_TEXT })
+                                .color(if is_selected { Color::BLACK } else { theme_colors.text_primary })
                                 .size(14),
                             horizontal_space(),
                             text(command.keywords().join(" "))
-                                .color(if is_selected { Color::from_rgb(0.3, 0.3, 0.3) } else { GRUVBOX_TEXT_MUTED })
+                                .color(if is_selected { Color::from_rgb(0.3, 0.3, 0.3) } else { theme_colors.text_muted })
                                 .size(12),
                         ]
                         .padding([8, 12])
@@ -63,9 +65,9 @@ impl CommandPalette {
                     .width(Length::Fill)
                     .style(move |_theme, status| {
                         let base_color = if is_selected {
-                            GRUVBOX_GREEN
+                            theme_colors.accent_border
                         } else {
-                            GRUVBOX_SURFACE
+                            theme_colors.dark_bg_secondary
                         };
                         
                         iced::widget::button::Style {
@@ -73,23 +75,23 @@ impl CommandPalette {
                                 iced::widget::button::Status::Hovered => {
                                     if is_selected {
                                         Color::from_rgb(
-                                            GRUVBOX_GREEN.r * 0.9,
-                                            GRUVBOX_GREEN.g * 0.9,
-                                            GRUVBOX_GREEN.b * 0.9,
+                                            theme_colors.accent_border.r * 0.9,
+                                            theme_colors.accent_border.g * 0.9,
+                                            theme_colors.accent_border.b * 0.9,
                                         )
                                     } else {
                                         Color::from_rgb(
-                                            GRUVBOX_SURFACE.r * 1.1,
-                                            GRUVBOX_SURFACE.g * 1.1,
-                                            GRUVBOX_SURFACE.b * 1.1,
+                                            theme_colors.dark_bg_secondary.r * 1.1,
+                                            theme_colors.dark_bg_secondary.g * 1.1,
+                                            theme_colors.dark_bg_secondary.b * 1.1,
                                         )
                                     }
                                 }
                                 _ => base_color,
                             })),
-                            text_color: if is_selected { Color::BLACK } else { GRUVBOX_TEXT },
+                            text_color: if is_selected { Color::BLACK } else { theme_colors.text_primary },
                             border: Border {
-                                color: if is_selected { GRUVBOX_GREEN } else { Color::TRANSPARENT },
+                                color: if is_selected { theme_colors.accent_border } else { Color::TRANSPARENT },
                                 width: if is_selected { 1.0 } else { 0.0 },
                                 radius: 4.0.into(),
                             },
@@ -108,7 +110,7 @@ impl CommandPalette {
             scrollable(
                 container(
                     text("No commands found")
-                        .color(GRUVBOX_TEXT_MUTED)
+                        .color(theme_colors.text_muted)
                         .size(14)
                 )
                 .padding(20)
@@ -128,14 +130,14 @@ impl CommandPalette {
         .padding(20)
         .width(Length::Fixed(600.0))
         .max_height(400.0)
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(GRUVBOX_BG)),
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(Background::Color(theme_colors.dark_bg)),
             border: Border {
-                color: GRUVBOX_BORDER,
+                color: theme_colors.border_color,
                 width: 2.0,
                 radius: 12.0.into(),
             },
-            text_color: Some(GRUVBOX_TEXT),
+            text_color: Some(theme_colors.text_primary),
             shadow: Shadow {
                 color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
                 offset: iced::Vector::new(0.0, 4.0),

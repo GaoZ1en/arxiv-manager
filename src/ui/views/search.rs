@@ -1,55 +1,52 @@
-// 搜索视图
+// 现代化搜索视图 - IRC客户端风格
 
 use iced::widget::{
     button, column, container, row, text, text_input, scrollable, 
     horizontal_rule, pick_list
 };
-use iced::{Element, Length, Color, Background, Border, Shadow};
+use iced::{Element, Length, Background, Border, Shadow};
 
 use crate::core::app_state::ArxivManager;
-use crate::core::models::{SearchField, SortBy, SortOrder};
+use crate::core::models::{SearchField, SortBy, SortOrder, DateRange};
 use crate::core::messages::Message;
-use crate::ui::style::{button_primary_style, button_secondary_style};
+use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, text_input_dynamic_style, chat_container_dynamic_style, pick_list_dynamic_style};
 use crate::ui::components::PaperCard;
-use crate::ui::theme::*;
 
 pub struct SearchView;
 
 impl SearchView {
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
+        let theme_colors = app.theme_colors();
+        
         let search_input = text_input("Search arXiv papers...", &app.search_query)
             .on_input(Message::SearchQueryChanged)
             .on_submit(Message::SearchSubmitted)
-            .style(|_theme, status| iced::widget::text_input::Style {
-                background: Background::Color(GRUVBOX_SURFACE),
-                border: Border {
-                    color: match status {
-                        iced::widget::text_input::Status::Focused => GRUVBOX_GREEN,
-                        _ => GRUVBOX_BORDER,
-                    },
-                    width: 1.0,
-                    radius: 4.0.into(),
-                },
-                icon: Color::TRANSPARENT,
-                placeholder: GRUVBOX_TEXT_MUTED,
-                value: GRUVBOX_TEXT,
-                selection: GRUVBOX_GREEN,
-            });
+            .style(text_input_dynamic_style(&app.settings.theme))
+            .padding(12)
+            .size(14);
 
-        let search_button = button(text("Search").color(Color::BLACK))
-            .on_press(Message::SearchSubmitted)
-            .style(button_primary_style);
+        let search_button = button(
+            text("Search")
+                .color(theme_colors.text_primary)
+                .size(14)
+        )
+        .on_press(Message::SearchSubmitted)
+        .style(button_primary_style_dynamic(&app.settings.theme))
+        .padding([10, 16]);
 
         let advanced_toggle = button(
             text(if app.advanced_search_visible { "Hide Advanced" } else { "Advanced" })
-                .color(GRUVBOX_TEXT)
+                .color(theme_colors.text_secondary)
+                .size(14)
         )
         .on_press(Message::AdvancedSearchToggled)
-        .style(button_secondary_style);
+        .style(button_secondary_style_dynamic(&app.settings.theme))
+        .padding([10, 16]);
 
         let search_bar = row![search_input, search_button, advanced_toggle]
-            .spacing(10)
-            .padding(10);
+            .spacing(12)
+            .padding(16)
+            .align_y(iced::Alignment::Center);
 
         let mut main_content = vec![search_bar.into()];
 
@@ -58,39 +55,74 @@ impl SearchView {
             main_content.push(Self::advanced_search_panel(app));
         }
 
-        main_content.push(horizontal_rule(1).into());
+        main_content.push(
+            horizontal_rule(1)
+                .style(move |_theme| iced::widget::rule::Style {
+                    color: theme_colors.border_color,
+                    width: 1,
+                    radius: 0.0.into(),
+                    fill_mode: iced::widget::rule::FillMode::Full,
+                })
+                .into()
+        );
 
         let results_content = if app.is_searching {
-            column![text("Searching...").color(GRUVBOX_TEXT)]
+            column![
+                text("Searching...")
+                    .color(theme_colors.text_secondary)
+                    .size(16)
+            ]
+            .spacing(16)
+            .padding(24)
+            .align_x(iced::Alignment::Center)
         } else if let Some(error) = &app.search_error {
             column![
-                text("Error:").color(GRUVBOX_RED),
-                text(error).color(GRUVBOX_TEXT)
+                text("Error:")
+                    .color(theme_colors.error_color)
+                    .size(16),
+                text(error)
+                    .color(theme_colors.text_primary)
+                    .size(14)
             ]
+            .spacing(8)
+            .padding(24)
         } else if app.search_results.is_empty() {
-            column![text("No results").color(GRUVBOX_TEXT_MUTED)]
+            column![
+                text("No results found")
+                    .color(theme_colors.text_muted)
+                    .size(16)
+            ]
+            .spacing(16)
+            .padding(24)
+            .align_x(iced::Alignment::Center)
         } else {
             column(
                 app.search_results.iter().map(|paper| {
                     PaperCard::view(app, paper, false)
                 }).collect::<Vec<Element<Message>>>()
-            ).spacing(10)
+            ).spacing(12)
         };
 
-        main_content.push(scrollable(results_content).height(Length::Fill).into());
+        main_content.push(
+            scrollable(
+                container(results_content)
+                    .padding(16)
+                    .width(Length::Fill)
+            )
+            .height(Length::Fill)
+            .into()
+        );
 
         container(column(main_content))
-        .padding(20)
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(GRUVBOX_BG)),
-            border: Border::default(),
-            text_color: Some(GRUVBOX_TEXT),
-            shadow: Shadow::default(),
-        })
-        .into()
+            .style(chat_container_dynamic_style(&app.settings.theme))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     fn advanced_search_panel(app: &ArxivManager) -> Element<'_, Message> {
+        let theme_colors = app.theme_colors();
+        
         // 搜索字段选择
         let search_field_list = pick_list(
             SearchField::all_variants(),
@@ -98,21 +130,8 @@ impl SearchView {
             Message::SearchFieldChanged,
         )
         .placeholder("Search in...")
-        .style(|_theme, status| iced::widget::pick_list::Style {
-            text_color: GRUVBOX_TEXT,
-            background: Background::Color(GRUVBOX_SURFACE),
-            border: Border {
-                color: match status {
-                    iced::widget::pick_list::Status::Active => GRUVBOX_BORDER,
-                    iced::widget::pick_list::Status::Hovered => GRUVBOX_GREEN,
-                    iced::widget::pick_list::Status::Opened => GRUVBOX_GREEN,
-                },
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            handle_color: GRUVBOX_TEXT,
-            placeholder_color: GRUVBOX_TEXT_MUTED,
-        });
+        .style(pick_list_dynamic_style(&app.settings.theme))
+        .padding(8);
 
         // 排序选项
         let sort_by_list = pick_list(
@@ -121,21 +140,8 @@ impl SearchView {
             Message::SortByChanged,
         )
         .placeholder("Sort by...")
-        .style(|_theme, status| iced::widget::pick_list::Style {
-            text_color: GRUVBOX_TEXT,
-            background: Background::Color(GRUVBOX_SURFACE),
-            border: Border {
-                color: match status {
-                    iced::widget::pick_list::Status::Active => GRUVBOX_BORDER,
-                    iced::widget::pick_list::Status::Hovered => GRUVBOX_GREEN,
-                    iced::widget::pick_list::Status::Opened => GRUVBOX_GREEN,
-                },
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            handle_color: GRUVBOX_TEXT,
-            placeholder_color: GRUVBOX_TEXT_MUTED,
-        });
+        .style(pick_list_dynamic_style(&app.settings.theme))
+        .padding(8);
 
         let sort_order_list = pick_list(
             SortOrder::all_variants(),
@@ -143,21 +149,8 @@ impl SearchView {
             Message::SortOrderChanged,
         )
         .placeholder("Order...")
-        .style(|_theme, status| iced::widget::pick_list::Style {
-            text_color: GRUVBOX_TEXT,
-            background: Background::Color(GRUVBOX_SURFACE),
-            border: Border {
-                color: match status {
-                    iced::widget::pick_list::Status::Active => GRUVBOX_BORDER,
-                    iced::widget::pick_list::Status::Hovered => GRUVBOX_GREEN,
-                    iced::widget::pick_list::Status::Opened => GRUVBOX_GREEN,
-                },
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            handle_color: GRUVBOX_TEXT,
-            placeholder_color: GRUVBOX_TEXT_MUTED,
-        });
+        .style(pick_list_dynamic_style(&app.settings.theme))
+        .padding(8);
 
         // 最大结果数
         let max_results_input = text_input(
@@ -165,53 +158,75 @@ impl SearchView {
             &app.search_config.max_results.to_string()
         )
         .on_input(Message::MaxResultsChanged)
-        .style(|_theme, status| iced::widget::text_input::Style {
-            background: Background::Color(GRUVBOX_SURFACE),
-            border: Border {
-                color: match status {
-                    iced::widget::text_input::Status::Focused => GRUVBOX_GREEN,
-                    _ => GRUVBOX_BORDER,
-                },
-                width: 1.0,
-                radius: 4.0.into(),
-            },
-            icon: Color::TRANSPARENT,
-            placeholder: GRUVBOX_TEXT_MUTED,
-            value: GRUVBOX_TEXT,
-            selection: GRUVBOX_GREEN,
-        });
+        .style(text_input_dynamic_style(&app.settings.theme))
+        .padding(8)
+        .size(14);
+
+        // 日期范围选择 (使用pick_list而不是单独的输入框)
+        let date_range_list = pick_list(
+            vec![
+                DateRange::Any,
+                DateRange::LastWeek,
+                DateRange::LastMonth,
+                DateRange::LastYear,
+            ],
+            Some(app.search_config.date_range.clone()),
+            Message::DateRangeChanged,
+        )
+        .placeholder("Date range...")
+        .style(pick_list_dynamic_style(&app.settings.theme))
+        .padding(8);
 
         container(
             column![
                 row![
-                    column![
-                        text("Search in:").color(GRUVBOX_TEXT).size(14),
-                        search_field_list
-                    ].spacing(4).width(Length::FillPortion(1)),
-                    column![
-                        text("Sort by:").color(GRUVBOX_TEXT).size(14),
-                        sort_by_list
-                    ].spacing(4).width(Length::FillPortion(1)),
-                    column![
-                        text("Order:").color(GRUVBOX_TEXT).size(14),
-                        sort_order_list
-                    ].spacing(4).width(Length::FillPortion(1)),
-                    column![
-                        text("Max results:").color(GRUVBOX_TEXT).size(14),
-                        max_results_input
-                    ].spacing(4).width(Length::FillPortion(1)),
-                ].spacing(20),
-            ].spacing(10)
+                    text("Search in:")
+                        .color(theme_colors.text_secondary)
+                        .size(14),
+                    search_field_list
+                ]
+                .spacing(12)
+                .align_y(iced::Alignment::Center),
+                
+                row![
+                    text("Sort by:")
+                        .color(theme_colors.text_secondary)
+                        .size(14),
+                    sort_by_list,
+                    sort_order_list
+                ]
+                .spacing(12)
+                .align_y(iced::Alignment::Center),
+                
+                row![
+                    text("Max results:")
+                        .color(theme_colors.text_secondary)
+                        .size(14),
+                    max_results_input
+                ]
+                .spacing(12)
+                .align_y(iced::Alignment::Center),
+                
+                row![
+                    text("Date range:")
+                        .color(theme_colors.text_secondary)
+                        .size(14),
+                    date_range_list
+                ]
+                .spacing(12)
+                .align_y(iced::Alignment::Center),
+            ]
+            .spacing(16)
+            .padding(16)
         )
-        .padding(15)
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(GRUVBOX_SURFACE)),
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(Background::Color(theme_colors.sidebar_bg)),
             border: Border {
-                color: GRUVBOX_BORDER,
+                color: theme_colors.border_color,
                 width: 1.0,
-                radius: 6.0.into(),
+                radius: 8.0.into(),
             },
-            text_color: Some(GRUVBOX_TEXT),
+            text_color: Some(theme_colors.text_primary),
             shadow: Shadow::default(),
         })
         .into()

@@ -24,7 +24,7 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            theme: Theme::GruvboxDark,
+            theme: Theme::ModernDark,
             download_directory: "downloads".to_string(),
             auto_download: false,
             max_concurrent_downloads: 3,

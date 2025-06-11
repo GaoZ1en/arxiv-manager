@@ -12,5 +12,9 @@ pub mod app;
 // 搜索模块
 pub mod search;
 
+// 领域驱动设计架构
+pub mod domains;     // 领域层
+pub mod application; // 应用层
+
 pub use core::*;
 pub use utils::*;

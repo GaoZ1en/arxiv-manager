@@ -6,45 +6,46 @@ use iced::{Element, Color, Background, Border, Shadow};
 use crate::core::app_state::ArxivManager;
 use crate::core::models::{ArxivPaper, DownloadItem, DownloadStatus, TabContent};
 use crate::core::messages::Message;
-use crate::ui::style::{button_primary_style, button_secondary_style, button_danger_style};
-use crate::ui::theme::*;
+use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, button_danger_style_dynamic};
 
 pub struct PaperCard;
 
 impl PaperCard {
     pub fn view<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper, is_saved: bool) -> Element<'a, Message> {
+        let theme_colors = app.theme_colors();
+        
         let title = text(&paper.title)
-            .color(GRUVBOX_TEXT)
+            .color(theme_colors.text_primary)
             .size(16);
 
         let authors = text(paper.authors.join(", "))
-            .color(GRUVBOX_TEXT_MUTED)
+            .color(theme_colors.text_muted)
             .size(12);
 
         let buttons = if is_saved {
             row![
                 button(text("Remove").color(Color::WHITE))
                     .on_press(Message::RemovePaper(paper.id.clone()))
-                    .style(button_danger_style),
+                    .style(button_danger_style_dynamic(&app.settings.theme)),
                 button(text("Download").color(Color::BLACK))
                     .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_primary_style),
-                button(text("View").color(GRUVBOX_TEXT))
+                    .style(button_primary_style_dynamic(&app.settings.theme)),
+                button(text("View").color(theme_colors.text_primary))
                     .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
                         Message::NewTab(TabContent::PaperView(index))
                     } else {
                         Message::NoOp
                     })
-                    .style(button_secondary_style),
+                    .style(button_secondary_style_dynamic(&app.settings.theme)),
             ]
         } else {
             row![
                 button(text("Save").color(Color::BLACK))
                     .on_press(Message::SavePaper(paper.clone()))
-                    .style(button_primary_style),
-                button(text("Download").color(GRUVBOX_TEXT))
+                    .style(button_primary_style_dynamic(&app.settings.theme)),
+                button(text("Download").color(theme_colors.text_primary))
                     .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_secondary_style),
+                    .style(button_secondary_style_dynamic(&app.settings.theme)),
             ]
         }
         .spacing(8);
@@ -59,22 +60,22 @@ impl PaperCard {
             .spacing(4)
         )
         .padding(12)
-        .style(|_theme| iced::widget::container::Style {
-            background: Some(Background::Color(GRUVBOX_SURFACE)),
+        .style(move |_theme| iced::widget::container::Style {
+            background: Some(Background::Color(theme_colors.dark_bg_secondary)),
             border: Border {
-                color: GRUVBOX_BORDER,
+                color: theme_colors.border_color,
                 width: 1.0,
                 radius: 8.0.into(),
             },
-            text_color: Some(GRUVBOX_TEXT),
+            text_color: Some(theme_colors.text_primary),
             shadow: Shadow::default(),
         })
         .into()
     }
 
-    pub fn download_card<'a>(download: &'a DownloadItem) -> Element<'a, Message> {
+    pub fn download_card<'a>(download: &'a DownloadItem, theme_colors: crate::ui::theme::ThemeColors) -> Element<'a, Message> {
         let title = text(&download.title)
-            .color(GRUVBOX_TEXT)
+            .color(theme_colors.text_primary)
             .size(14);
 
         let status_text = match &download.status {
@@ -86,9 +87,9 @@ impl PaperCard {
 
         let status = text(status_text)
             .color(match download.status {
-                DownloadStatus::Failed(_) => GRUVBOX_RED,
-                DownloadStatus::Completed => GRUVBOX_GREEN,
-                _ => GRUVBOX_TEXT_MUTED,
+                DownloadStatus::Failed(_) => theme_colors.error_color,
+                DownloadStatus::Completed => theme_colors.success_color,
+                _ => theme_colors.text_muted,
             })
             .size(12);
 
@@ -106,14 +107,14 @@ impl PaperCard {
 
         container(content)
             .padding(12)
-            .style(|_theme| iced::widget::container::Style {
-                background: Some(Background::Color(GRUVBOX_SURFACE)),
+            .style(move |_theme| iced::widget::container::Style {
+                background: Some(Background::Color(theme_colors.dark_bg_secondary)),
                 border: Border {
-                    color: GRUVBOX_BORDER,
+                    color: theme_colors.border_color,
                     width: 1.0,
                     radius: 8.0.into(),
                 },
-                text_color: Some(GRUVBOX_TEXT),
+                text_color: Some(theme_colors.text_primary),
                 shadow: Shadow::default(),
             })
             .into()

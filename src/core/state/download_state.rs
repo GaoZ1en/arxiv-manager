@@ -328,23 +328,24 @@ impl DownloadState {
     
     /// 开始下载
     pub fn start_download(&mut self, arxiv_id: &str) {
-        if let Some(task) = self.queue.next_task() {
-            if task.paper.id == arxiv_id {
-                let progress = DownloadProgress {
-                    arxiv_id: arxiv_id.to_string(),
-                    bytes_downloaded: 0,
-                    total_bytes: None,
-                    speed_bps: None,
-                    start_time: Utc::now(),
-                    last_update: Utc::now(),
-                    eta_seconds: None,
-                    status: DownloadStatus::Downloading,
-                };
-                
-                self.active_downloads.insert(arxiv_id.to_string(), progress);
-                self.download_errors.remove(arxiv_id);
-            }
+        // 如果已经在活跃下载中，直接返回
+        if self.is_download_active(arxiv_id) {
+            return;
         }
+        
+        let progress = DownloadProgress {
+            arxiv_id: arxiv_id.to_string(),
+            bytes_downloaded: 0,
+            total_bytes: None,
+            speed_bps: None,
+            start_time: Utc::now(),
+            last_update: Utc::now(),
+            eta_seconds: None,
+            status: DownloadStatus::Downloading,
+        };
+        
+        self.active_downloads.insert(arxiv_id.to_string(), progress);
+        self.download_errors.remove(arxiv_id);
     }
     
     /// 更新下载进度

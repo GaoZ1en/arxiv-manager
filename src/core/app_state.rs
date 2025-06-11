@@ -178,11 +178,52 @@ impl ArxivManager {
     }
 
     pub fn theme(&self) -> iced::Theme {
+        use crate::core::models::Theme as AppTheme;
+        
         match self.settings.theme {
-            crate::core::models::Theme::GruvboxDark => iced::Theme::GruvboxDark,
-            crate::core::models::Theme::GruvboxLight => iced::Theme::GruvboxLight,
-            crate::core::models::Theme::Dark => iced::Theme::Dark,
-            crate::core::models::Theme::Light => iced::Theme::Light,
+            // 现代主题
+            AppTheme::ModernDark => iced::Theme::Dark,
+            AppTheme::ModernLight => iced::Theme::Light,
+            
+            // Gruvbox 主题系列
+            AppTheme::GruvboxDark => iced::Theme::GruvboxDark,
+            AppTheme::GruvboxLight => iced::Theme::GruvboxLight,
+            AppTheme::GruvboxMaterial => iced::Theme::GruvboxDark,
+            
+            // Catppuccin 主题系列
+            AppTheme::CatppuccinMocha => iced::Theme::Dark,
+            AppTheme::CatppuccinMacchiato => iced::Theme::Dark,
+            AppTheme::CatppuccinFrappe => iced::Theme::Dark,
+            AppTheme::CatppuccinLatte => iced::Theme::Light,
+            
+            // Solarized 主题系列
+            AppTheme::SolarizedDark => iced::Theme::Dark,
+            AppTheme::SolarizedLight => iced::Theme::Light,
+            
+            // 其他暗色主题
+            AppTheme::Dracula => iced::Theme::Dark,
+            AppTheme::Nord => iced::Theme::Dark,
+            AppTheme::OneDark => iced::Theme::Dark,
+            AppTheme::GitHubDark => iced::Theme::Dark,
+            AppTheme::TokyoNight => iced::Theme::Dark,
+            AppTheme::AyuDark => iced::Theme::Dark,
+            AppTheme::AyuMirage => iced::Theme::Dark,
+            
+            // 浅色主题
+            AppTheme::NordLight => iced::Theme::Light,
+            AppTheme::OneLight => iced::Theme::Light,
+            AppTheme::GitHubLight => iced::Theme::Light,
+            AppTheme::TokyoNightLight => iced::Theme::Light,
+            AppTheme::AyuLight => iced::Theme::Light,
+            
+            // 经典主题
+            AppTheme::Dark => iced::Theme::Dark,
+            AppTheme::Light => iced::Theme::Light,
         }
+    }
+    
+    /// 获取当前应用主题的颜色
+    pub fn theme_colors(&self) -> crate::ui::theme::ThemeColors {
+        crate::ui::theme::get_theme_colors(&self.settings.theme)
     }
 }
