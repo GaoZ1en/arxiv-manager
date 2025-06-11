@@ -12,6 +12,9 @@ pub struct CommandPalette;
 impl CommandPalette {
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
         
         // 命令栏主体
         let command_input = text_input("Type a command...", &app.command_palette_input)
@@ -25,7 +28,8 @@ impl CommandPalette {
             } else {
                 Message::ClearCommandPalette
             })
-            .size(18)
+            .size(base_font_size * 1.29)
+            .font(current_font)
             .style(move |_theme, status| iced::widget::text_input::Style {
                 background: Background::Color(theme_colors.dark_bg_secondary),
                 border: Border {
@@ -52,13 +56,15 @@ impl CommandPalette {
                         row![
                             text(command.display_name())
                                 .color(if is_selected { Color::BLACK } else { theme_colors.text_primary })
-                                .size(14),
+                                .size(base_font_size)
+                                .font(current_font),
                             horizontal_space(),
                             text(command.keywords().join(" "))
                                 .color(if is_selected { Color::from_rgb(0.3, 0.3, 0.3) } else { theme_colors.text_muted })
-                                .size(12),
+                                .size(base_font_size * 0.86)
+                                .font(current_font),
                         ]
-                        .padding([8, 12])
+                        .padding([8.0 * scale, 12.0 * scale])
                         .width(Length::Fill)
                     )
                     .on_press(Message::ExecuteCommand(command.clone()))
@@ -102,34 +108,35 @@ impl CommandPalette {
                     command_button.into()
                 }).collect::<Vec<Element<Message>>>()
             )
-            .spacing(2);
+            .spacing(2.0 * scale);
 
             scrollable(suggestions)
-                .height(Length::Fixed(300.0))
+                .height(Length::Fixed(300.0 * scale))
         } else {
             scrollable(
                 container(
                     text("No commands found")
                         .color(theme_colors.text_muted)
-                        .size(14)
+                        .size(base_font_size)
+                        .font(current_font)
                 )
-                .padding(20)
+                .padding(20.0 * scale)
                 .center_x(Length::Fill)
             )
-            .height(Length::Fixed(60.0))
+            .height(Length::Fixed(60.0 * scale))
         };
 
         let command_palette = container(
             column![
                 command_input,
-                vertical_space().height(8),
+                vertical_space().height(8.0 * scale),
                 suggestions_list
             ]
-            .spacing(0)
+            .spacing(0.0)
         )
-        .padding(20)
-        .width(Length::Fixed(600.0))
-        .max_height(400.0)
+        .padding(20.0 * scale)
+        .width(Length::Fixed(600.0 * scale))
+        .max_height(400.0 * scale)
         .style(move |_theme| iced::widget::container::Style {
             background: Some(Background::Color(theme_colors.dark_bg)),
             border: Border {

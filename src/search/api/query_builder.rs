@@ -6,18 +6,69 @@ use crate::core::models::{SearchConfig, DateRange};
 pub fn build_search_url(config: &SearchConfig) -> Result<String, String> {
     let mut query_parts = Vec::new();
     
-    // 基础查询
-    let search_field = config.search_in.as_str();
-    query_parts.push(format!("{}:{}", search_field, config.query));
+    // 基础查询 - 只有当查询不为空时才添加
+    if !config.query.trim().is_empty() {
+        let search_field = config.search_in.as_str();
+        query_parts.push(format!("{}:{}", search_field, config.query.trim()));
+    }
+    
+    // 精确短语搜索
+    if let Some(exact_phrase) = &config.exact_phrase {
+        if !exact_phrase.trim().is_empty() {
+            query_parts.push(format!("all:\"{}\"", exact_phrase.trim()));
+        }
+    }
+    
+    // 排除词汇
+    for exclude_word in &config.exclude_words {
+        if !exclude_word.trim().is_empty() {
+            query_parts.push(format!("NOT all:{}", exclude_word.trim()));
+        }
+    }
     
     // 添加作者过滤
     for author in &config.authors {
-        query_parts.push(format!("au:{}", author));
+        if !author.trim().is_empty() {
+            query_parts.push(format!("au:\"{}\"", author.trim()));
+        }
+    }
+    
+    // 期刊引用
+    if let Some(journal_ref) = &config.journal_ref {
+        if !journal_ref.trim().is_empty() {
+            query_parts.push(format!("jr:\"{}\"", journal_ref.trim()));
+        }
+    }
+    
+    // 学科分类
+    if let Some(subject_class) = &config.subject_class {
+        if !subject_class.trim().is_empty() {
+            query_parts.push(format!("subj-class:{}", subject_class.trim()));
+        }
+    }
+    
+    // 报告编号
+    if let Some(report_number) = &config.report_number {
+        if !report_number.trim().is_empty() {
+            query_parts.push(format!("rn:{}", report_number.trim()));
+        }
+    }
+    
+    // ID列表 - arXiv ID的直接查询
+    for id in &config.id_list {
+        if !id.trim().is_empty() {
+            query_parts.push(format!("id:{}", id.trim()));
+        }
     }
     
     // 添加分类过滤
     for category in &config.categories {
-        query_parts.push(format!("cat:{}", category));
+        query_parts.push(format!("cat:{}", category.code()));
+    }
+    
+    // 如果没有任何查询条件，返回错误
+    if query_parts.is_empty() {
+        return Err("At least one search criterion must be specified".to_string());
     }
     
     // 构建最终查询字符串
@@ -26,8 +77,8 @@ pub fn build_search_url(config: &SearchConfig) -> Result<String, String> {
     
     // 构建URL
     let mut url = format!(
-        "https://export.arxiv.org/api/query?search_query={}&start=0&max_results={}",
-        encoded_query, config.max_results
+        "https://export.arxiv.org/api/query?search_query={}&start={}&max_results={}",
+        encoded_query, config.start_index, config.max_results
     );
     
     // 添加排序参数

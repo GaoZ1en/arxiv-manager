@@ -19,6 +19,10 @@ pub struct AppSettings {
     pub check_updates: bool,
     pub language: Language,
     pub shortcuts: KeyboardShortcuts,
+    // 新增字体和缩放设置
+    pub font_family: String,
+    pub font_size: f32,
+    pub ui_scale: f32,
 }
 
 impl Default for AppSettings {
@@ -38,6 +42,10 @@ impl Default for AppSettings {
             check_updates: true,
             language: Language::English,
             shortcuts: KeyboardShortcuts::default(),
+            // 字体和缩放默认值
+            font_family: "系统默认".to_string(),
+            font_size: 14.0,
+            ui_scale: 1.0,
         }
     }
 }

@@ -18,10 +18,14 @@ impl SettingsView {
     /// 创建设置视图的主界面
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
         
         let title = text("Settings")
             .color(theme_colors.text_primary)
-            .size(28);
+            .size(base_font_size * 2.0)
+            .font(current_font);
 
         // 外观设置区域
         let appearance_section = appearance::create_appearance_section(app);
@@ -37,16 +41,16 @@ impl SettingsView {
             scrollable(
                 column![
                     title,
-                    vertical_space().height(20),
+                    vertical_space().height(20.0 * scale),
                     appearance_section,
-                    vertical_space().height(15),
+                    vertical_space().height(15.0 * scale),
                     downloads_section,
-                    vertical_space().height(15),
+                    vertical_space().height(15.0 * scale),
                     shortcuts_section,
-                ].spacing(10)
+                ].spacing(10.0 * scale)
             )
         )
-        .padding(20)
+        .padding(20.0 * scale)
         .style(move |_theme| iced::widget::container::Style {
             background: Some(Background::Color(theme_colors.dark_bg)),
             border: Border::default(),

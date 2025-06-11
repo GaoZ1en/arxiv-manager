@@ -12,6 +12,9 @@ use super::components::setting_row::create_setting_row;
 /// 创建快捷键设置区域
 pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
     let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
     let shortcuts = app.settings.shortcuts.get_all_actions();
     let mut shortcut_items = Vec::new();
 
@@ -22,14 +25,14 @@ pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
                 create_shortcut_edit_row(app, action)
             } else {
                 // 显示当前快捷键和编辑按钮（编辑其他快捷键时禁用）
-                create_shortcut_disabled_row(&shortcut_key.display, &theme_colors)
+                create_shortcut_disabled_row(&shortcut_key.display, app)
             }
         } else {
             // 显示当前快捷键和编辑按钮
             create_shortcut_normal_row(action, &shortcut_key.display, app)
         };
 
-        let shortcut_row = create_setting_row(description, shortcut_display);
+        let shortcut_row = create_setting_row(description, shortcut_display, app);
         shortcut_items.push(shortcut_row);
     }
 
@@ -40,11 +43,12 @@ pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
     let reset_button_elem = button(
         text("重置所有快捷键")
             .color(theme_colors.text_primary)
-            .size(14)
+            .size(base_font_size)
+            .font(current_font)
     )
     .on_press(Message::ResetShortcuts)
     .style(button_danger_style_dynamic(&app.settings.theme))
-    .padding([8, 16]);
+    .padding([8.0 * scale, 16.0 * scale]);
 
     let reset_container = container(reset_button_elem)
         .width(Length::Fill)
@@ -56,12 +60,15 @@ pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
         "⌨️ Keyboard Shortcuts", 
         theme_colors.button_primary, 
         shortcut_items, 
-        theme_colors
+        app
     )
 }
 
 /// 创建正在编辑状态的快捷键行
 fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Element<'a, Message> {
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
     let input_valid = crate::core::models::ShortcutKey::is_valid_shortcut(&app.shortcut_input);
     
     row![
@@ -75,41 +82,49 @@ fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Eleme
             } else {
                 Message::NoOp
             })
-            .style(text_input_dynamic_style(&app.settings.theme)),
+            .style(text_input_dynamic_style(&app.settings.theme))
+            .size(base_font_size)
+            .font(current_font),
         if input_valid {
-            button(text("确认").size(12))
+            button(text("确认").size(base_font_size * 0.86).font(current_font))
                 .on_press(Message::ShortcutChanged {
                     action: action.to_string(),
                     shortcut: app.shortcut_input.clone(),
                 })
                 .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([4, 8])
+                .padding([4.0 * scale, 8.0 * scale])
         } else {
-            button(text("确认").size(12))
+            button(text("确认").size(base_font_size * 0.86).font(current_font))
                 .style(disabled_button_dynamic_style(&app.theme_colors()))
-                .padding([4, 8])
+                .padding([4.0 * scale, 8.0 * scale])
         },
-        button(text("取消").size(12))
+        button(text("取消").size(base_font_size * 0.86).font(current_font))
             .on_press(Message::ShortcutEditCancelled)
             .style(button_secondary_style_dynamic(&app.settings.theme))
-            .padding([4, 8])
+            .padding([4.0 * scale, 8.0 * scale])
     ]
-    .spacing(8)
+    .spacing(8.0 * scale)
     .align_y(iced::Alignment::Center)
     .into()
 }
 
 /// 创建禁用状态的快捷键行（当编辑其他快捷键时）
-fn create_shortcut_disabled_row<'a>(shortcut_display: &'a str, theme_colors: &crate::ui::theme::ThemeColors) -> Element<'a, Message> {
+fn create_shortcut_disabled_row<'a>(shortcut_display: &'a str, app: &'a ArxivManager) -> Element<'a, Message> {
+    let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
+    
     row![
         text(shortcut_display)
             .color(theme_colors.text_muted)
-            .size(14),
-        button(text("编辑").size(12))
-            .style(disabled_button_dynamic_style(theme_colors))
-            .padding([4, 8])
+            .size(base_font_size)
+            .font(current_font),
+        button(text("编辑").size(base_font_size * 0.86).font(current_font))
+            .style(disabled_button_dynamic_style(&theme_colors))
+            .padding([4.0 * scale, 8.0 * scale])
     ]
-    .spacing(8)
+    .spacing(8.0 * scale)
     .align_y(iced::Alignment::Center)
     .into()
 }
@@ -117,16 +132,21 @@ fn create_shortcut_disabled_row<'a>(shortcut_display: &'a str, theme_colors: &cr
 /// 创建正常状态的快捷键行
 fn create_shortcut_normal_row<'a>(action: &'a str, shortcut_display: &'a str, app: &'a ArxivManager) -> Element<'a, Message> {
     let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
+    
     row![
         text(shortcut_display)
             .color(theme_colors.text_primary)
-            .size(14),
-        button(text("编辑").size(12))
+            .size(base_font_size)
+            .font(current_font),
+        button(text("编辑").size(base_font_size * 0.86).font(current_font))
             .on_press(Message::ShortcutEditStarted(action.to_string()))
             .style(button_secondary_style_dynamic(&app.settings.theme))
-            .padding([4, 8])
+            .padding([4.0 * scale, 8.0 * scale])
     ]
-    .spacing(8)
+    .spacing(8.0 * scale)
     .align_y(iced::Alignment::Center)
     .into()
 }

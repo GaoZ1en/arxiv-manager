@@ -28,11 +28,16 @@ impl ArxivManager {
                 TabContent::Settings => SettingsView::view(self),
                 TabContent::PaperView(index) => {
                     if let Some(paper) = self.saved_papers.get(*index) {
-                        PaperView::view(paper, &self.settings.theme)
+                        PaperView::view(paper, self)
                     } else {
+                        let theme_colors = self.theme_colors();
+                        let current_font = self.current_font();
+                        let base_font_size = self.current_font_size();
                         container(
                             iced::widget::text("Paper not found")
-                                .color(crate::ui::theme::TEXT_MUTED)
+                                .color(theme_colors.text_muted)
+                                .size(base_font_size)
+                                .font(current_font)
                         )
                         .style(chat_container_dynamic_style(&self.settings.theme))
                         .into()

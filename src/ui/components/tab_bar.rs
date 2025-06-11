@@ -13,37 +13,41 @@ pub struct TabBar;
 impl TabBar {
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let theme_colors = app.theme_colors();
-        let mut tabs_row = row![].spacing(4);
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
+        let mut tabs_row = row![].spacing(4.0 * scale);
 
         for (index, tab) in app.tabs.iter().enumerate() {
             let is_active = index == app.active_tab;
             
             let tab_content = row![
                 text(&tab.title)
-                    .size(13)
+                    .size(base_font_size * 0.93)
+                    .font(current_font)
                     .color(if is_active { theme_colors.text_primary } else { theme_colors.text_secondary }),
                 if tab.closable {
-                    button(text("×").size(14))
+                    button(text("×").size(base_font_size).font(current_font))
                         .on_press(Message::TabClose(index))
                         .style(tab_close_dynamic_style(&app.settings.theme))
-                        .padding([2, 4])
+                        .padding([2.0 * scale, 4.0 * scale])
                         .into()
                 } else {
                     Element::<Message>::from(horizontal_space().width(0))
                 }
             ]
-            .spacing(8)
+            .spacing(8.0 * scale)
             .align_y(Alignment::Center);
             
             let tab_button = if is_active {
                 button(tab_content)
                     .on_press(Message::TabClicked(index))
-                    .padding([10, 16])
+                    .padding([10.0 * scale, 16.0 * scale])
                     .style(tab_active_dynamic_style(&app.settings.theme))
             } else {
                 button(tab_content)
                     .on_press(Message::TabClicked(index))
-                    .padding([10, 16])
+                    .padding([10.0 * scale, 16.0 * scale])
                     .style(tab_inactive_dynamic_style(&app.settings.theme))
             };
 
@@ -53,17 +57,18 @@ impl TabBar {
         // 添加新标签页按钮
         let new_tab_button = button(
             text("+")
-                .size(16)
+                .size(base_font_size * 1.14)
+                .font(current_font)
                 .color(theme_colors.text_secondary)
         )
         .on_press(Message::NewTab(TabContent::Search))
-        .padding([10, 12])
+        .padding([10.0 * scale, 12.0 * scale])
         .style(button_secondary_style_dynamic(&app.settings.theme));
 
         tabs_row = tabs_row.push(horizontal_space()).push(new_tab_button);
 
         container(tabs_row)
-            .padding([8, 16])
+            .padding([8.0 * scale, 16.0 * scale])
             .width(Length::Fill)
             .style(tab_bar_container_dynamic_style(&app.settings.theme))
             .into()

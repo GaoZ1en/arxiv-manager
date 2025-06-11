@@ -1,7 +1,7 @@
 // 现代化按钮样式定义 - IRC客户端风格，支持动态主题
 
 use iced::{Color, Background, Border, Shadow};
-use iced::widget::{button, container, text_input};
+use iced::widget::{button, container, text_input, checkbox};
 
 use crate::ui::theme::{*, SIDEBAR_BG, BORDER_COLOR, TEXT_PRIMARY};
 use crate::core::models::Theme as ThemeVariant;
@@ -541,5 +541,20 @@ pub fn button_danger_style_dynamic(theme: &ThemeVariant) -> impl Fn(&iced::Theme
             },
             shadow: Shadow::default(),
         }
+    }
+}
+
+// Checkbox样式
+pub fn checkbox_dynamic_style(theme: &ThemeVariant) -> impl Fn(&iced::Theme, checkbox::Status) -> checkbox::Style {
+    let colors = get_theme_colors(theme);
+    move |_theme, _status| checkbox::Style {
+        background: Background::Color(colors.dark_bg),
+        icon_color: colors.success_color,
+        border: Border {
+            color: colors.border_color,
+            width: 1.0,
+            radius: 2.0.into(),
+        },
+        text_color: Some(colors.text_primary),
     }
 }

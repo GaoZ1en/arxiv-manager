@@ -13,21 +13,27 @@ pub struct LibraryView;
 impl LibraryView {
     pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
         
         let content = if app.saved_papers.is_empty() {
             column![
                 text("📚 Your Library")
                     .color(theme_colors.text_primary)
-                    .size(20),
+                    .size(base_font_size * 1.43)
+                    .font(current_font),
                 text("No saved papers yet")
                     .color(theme_colors.text_muted)
-                    .size(16),
+                    .size(base_font_size * 1.14)
+                    .font(current_font),
                 text("Papers you save from search will appear here")
                     .color(theme_colors.text_secondary)
-                    .size(14)
+                    .size(base_font_size)
+                    .font(current_font)
             ]
-            .spacing(12)
-            .padding(32)
+            .spacing(12.0 * scale)
+            .padding(32.0 * scale)
             .align_x(iced::Alignment::Center)
         } else {
             let papers_count = app.saved_papers.len();
@@ -35,13 +41,14 @@ impl LibraryView {
                 container(
                     text(format!("📚 Library ({} papers)", papers_count))
                         .color(theme_colors.text_primary)
-                        .size(18)
+                        .size(base_font_size * 1.29)
+                        .font(current_font)
                 )
                 .padding(iced::Padding {
-                    top: 16.0,
-                    right: 16.0,
-                    bottom: 8.0,
-                    left: 16.0,
+                    top: 16.0 * scale,
+                    right: 16.0 * scale,
+                    bottom: 8.0 * scale,
+                    left: 16.0 * scale,
                 }),
                 
                 container(

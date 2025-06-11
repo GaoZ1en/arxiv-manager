@@ -4,7 +4,8 @@ use iced::widget::{column, container, text, vertical_space};
 use iced::{Element, Background, Border, Color, Shadow};
 
 use crate::core::messages::Message;
-use crate::ui::theme::{ThemeColors, DARK_BG_SECONDARY, TEXT_PRIMARY};
+use crate::core::app_state::ArxivManager;
+use crate::ui::theme::{DARK_BG_SECONDARY, TEXT_PRIMARY};
 
 /// 创建设置区域
 /// 
@@ -12,21 +13,29 @@ use crate::ui::theme::{ThemeColors, DARK_BG_SECONDARY, TEXT_PRIMARY};
 /// - `title`: 区域标题
 /// - `accent_color`: 区域主题色（用于标题和边框）
 /// - `items`: 区域内的设置项列表
-/// - `theme_colors`: 当前主题颜色
+/// - `app`: 应用状态，用于获取字体和缩放设置
 pub fn create_settings_section_with_colors<'a>(
     title: &'a str, 
     accent_color: Color, 
     items: Vec<Element<'a, Message>>,
-    theme_colors: ThemeColors,
+    app: &'a crate::core::app_state::ArxivManager,
 ) -> Element<'a, Message> {
+    let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
+    
     container(
         column![
-            text(title).color(accent_color).size(20),
-            vertical_space().height(10),
-            column(items).spacing(15)
-        ].spacing(5)
+            text(title)
+                .color(accent_color)
+                .size(base_font_size * 1.43)
+                .font(current_font),
+            vertical_space().height(10.0 * scale),
+            column(items).spacing(15.0 * scale)
+        ].spacing(5.0 * scale)
     )
-    .padding(15)
+    .padding(15.0 * scale)
     .style(move |_theme| iced::widget::container::Style {
         background: Some(Background::Color(theme_colors.dark_bg_secondary)),
         border: Border {

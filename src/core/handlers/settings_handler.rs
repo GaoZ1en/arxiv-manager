@@ -23,6 +23,10 @@ pub trait SettingsHandler {
     fn handle_settings_reset(&mut self) -> Task<Message>;
     fn handle_settings_export(&mut self) -> Task<Message>;
     fn handle_settings_import(&mut self, path: String) -> Task<Message>;
+    // 新增字体和缩放处理方法
+    fn handle_font_family_changed(&mut self, font_family: String) -> Task<Message>;
+    fn handle_font_size_changed(&mut self, font_size: String) -> Task<Message>;
+    fn handle_ui_scale_changed(&mut self, ui_scale: String) -> Task<Message>;
 }
 
 impl SettingsHandler for ArxivManager {
@@ -110,6 +114,25 @@ impl SettingsHandler for ArxivManager {
     fn handle_settings_import(&mut self, path: String) -> Task<Message> {
         // TODO: 实现设置导入功能
         println!("Importing settings from: {}", path);
+        Task::none()
+    }
+
+    fn handle_font_family_changed(&mut self, font_family: String) -> Task<Message> {
+        self.settings.font_family = font_family;
+        Task::none()
+    }
+
+    fn handle_font_size_changed(&mut self, font_size: String) -> Task<Message> {
+        if let Ok(size) = font_size.parse::<f32>() {
+            self.settings.font_size = size.clamp(8.0, 72.0);
+        }
+        Task::none()
+    }
+
+    fn handle_ui_scale_changed(&mut self, ui_scale: String) -> Task<Message> {
+        if let Ok(scale) = ui_scale.parse::<f32>() {
+            self.settings.ui_scale = scale.clamp(0.5, 3.0);
+        }
         Task::none()
     }
 }

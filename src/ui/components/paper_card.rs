@@ -13,53 +13,71 @@ pub struct PaperCard;
 impl PaperCard {
     pub fn view<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper, is_saved: bool) -> Element<'a, Message> {
         let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
         
         let title = text(&paper.title)
             .color(theme_colors.text_primary)
-            .size(16);
+            .size(base_font_size * 1.14)
+            .font(current_font);
+
+        // 显示 arXiv ID
+        let arxiv_id = text(format!("arXiv:{}", &paper.id))
+            .color(theme_colors.info_color)
+            .size(base_font_size * 0.8)
+            .font(current_font);
 
         let authors = text(paper.authors.join(", "))
             .color(theme_colors.text_muted)
-            .size(12);
+            .size(base_font_size * 0.86)
+            .font(current_font);
 
         let buttons = if is_saved {
             row![
-                button(text("Remove").color(Color::WHITE))
+                button(text("Remove").color(Color::WHITE).size(base_font_size).font(current_font))
                     .on_press(Message::RemovePaper(paper.id.clone()))
-                    .style(button_danger_style_dynamic(&app.settings.theme)),
-                button(text("Download").color(Color::BLACK))
+                    .style(button_danger_style_dynamic(&app.settings.theme))
+                    .padding([8.0 * scale, 16.0 * scale]),
+                button(text("Download").color(Color::BLACK).size(base_font_size).font(current_font))
                     .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_primary_style_dynamic(&app.settings.theme)),
-                button(text("View").color(theme_colors.text_primary))
+                    .style(button_primary_style_dynamic(&app.settings.theme))
+                    .padding([8.0 * scale, 16.0 * scale]),
+                button(text("View").color(theme_colors.text_primary).size(base_font_size).font(current_font))
                     .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
                         Message::NewTab(TabContent::PaperView(index))
                     } else {
                         Message::NoOp
                     })
-                    .style(button_secondary_style_dynamic(&app.settings.theme)),
+                    .style(button_secondary_style_dynamic(&app.settings.theme))
+                    .padding([8.0 * scale, 16.0 * scale]),
             ]
         } else {
             row![
-                button(text("Save").color(Color::BLACK))
+                button(text("Save").color(Color::BLACK).size(base_font_size).font(current_font))
                     .on_press(Message::SavePaper(paper.clone()))
-                    .style(button_primary_style_dynamic(&app.settings.theme)),
-                button(text("Download").color(theme_colors.text_primary))
+                    .style(button_primary_style_dynamic(&app.settings.theme))
+                    .padding([8.0 * scale, 16.0 * scale]),
+                button(text("Download").color(theme_colors.text_primary).size(base_font_size).font(current_font))
                     .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_secondary_style_dynamic(&app.settings.theme)),
+                    .style(button_secondary_style_dynamic(&app.settings.theme))
+                    .padding([8.0 * scale, 16.0 * scale]),
             ]
         }
-        .spacing(8);
+        .spacing(8.0 * scale);
 
         container(
             column![
                 title,
+                arxiv_id,
                 authors,
-                vertical_space().height(8),
+                vertical_space().height(8.0 * scale),
                 buttons,
             ]
-            .spacing(4)
+            .spacing(4.0 * scale)
         )
-        .padding(12)
+        .width(iced::Length::Fill)  // 确保卡片填充可用宽度
+        .padding(12.0 * scale)
         .style(move |_theme| iced::widget::container::Style {
             background: Some(Background::Color(theme_colors.dark_bg_secondary)),
             border: Border {
@@ -73,10 +91,16 @@ impl PaperCard {
         .into()
     }
 
-    pub fn download_card<'a>(download: &'a DownloadItem, theme_colors: crate::ui::theme::ThemeColors) -> Element<'a, Message> {
+    pub fn download_card<'a>(download: &'a DownloadItem, app: &'a ArxivManager) -> Element<'a, Message> {
+        let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
+        
         let title = text(&download.title)
             .color(theme_colors.text_primary)
-            .size(14);
+            .size(base_font_size)
+            .font(current_font);
 
         let status_text = match &download.status {
             DownloadStatus::Pending => "Pending",
@@ -91,7 +115,8 @@ impl PaperCard {
                 DownloadStatus::Completed => theme_colors.success_color,
                 _ => theme_colors.text_muted,
             })
-            .size(12);
+            .size(base_font_size * 0.86)
+            .font(current_font);
 
         let progress = if matches!(download.status, DownloadStatus::Downloading) {
             Some(progress_bar(0.0..=100.0, download.progress))
@@ -99,14 +124,14 @@ impl PaperCard {
             None
         };
 
-        let mut content = column![title, status].spacing(4);
+        let mut content = column![title, status].spacing(4.0 * scale);
         
         if let Some(progress_bar) = progress {
             content = content.push(progress_bar);
         }
 
         container(content)
-            .padding(12)
+            .padding(12.0 * scale)
             .style(move |_theme| iced::widget::container::Style {
                 background: Some(Background::Color(theme_colors.dark_bg_secondary)),
                 border: Border {

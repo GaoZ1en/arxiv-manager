@@ -3,7 +3,7 @@
 use iced::widget::pane_grid;
 use std::path::PathBuf;
 
-use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder};
+use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder, ArxivCategory};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -14,16 +14,28 @@ pub enum Message {
     SearchQueryChanged(String),
     SearchSubmitted,
     SearchCompleted(Result<Vec<ArxivPaper>, String>),
+    // 无限滚动
+    LoadMoreResults,
+    LoadMoreCompleted(Result<Vec<ArxivPaper>, String>),
+    // 滚动事件
+    ScrolledToBottom,
+    // 搜索建议
+    SearchSuggestionSelected(String),
+    HideSearchSuggestions,
     // 高级搜索消息
     AdvancedSearchToggled,
     SearchFieldChanged(SearchField),
-    CategoryToggled(String),
+    CategoryToggled(ArxivCategory),
     DateRangeChanged(DateRange),
     SortByChanged(SortBy),
     SortOrderChanged(SortOrder),
     MaxResultsChanged(String),
     AuthorAdded(String),
     AuthorRemoved(usize),
+    // 作者输入
+    AuthorInputChanged(String),
+    // 快速作者搜索
+    SearchByAuthor(String),
     // 下载和保存操作
     DownloadPaper(ArxivPaper),
     DownloadProgress { paper_id: String, progress: f32 },
@@ -48,6 +60,10 @@ pub enum Message {
     ResetSettings,
     ExportSettings,
     ImportSettings,
+    // 字体和缩放设置
+    FontFamilyChanged(String),
+    FontSizeChanged(String),
+    UIScaleChanged(String),
     // 快捷键设置
     ShortcutChanged { 
         #[allow(dead_code)]

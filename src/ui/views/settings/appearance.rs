@@ -1,14 +1,14 @@
-// 外观设置页面 - 主题和语言配置
+// 外观设置页面 - 主题、语言、字体和缩放配置
 
-use iced::widget::{pick_list, container, column, row, text, horizontal_space};
+use iced::widget::{pick_list, container, column, row, text, horizontal_space, text_input, slider};
 use iced::{Element, Background, Border};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::models::{Theme, Language};
 use crate::core::messages::Message;
 use crate::ui::theme::{get_theme_preview};
-use crate::ui::style::pick_list_dynamic_style;
-use super::components::settings_section::{create_settings_section, create_settings_section_with_colors};
+use crate::ui::style::{pick_list_dynamic_style, text_input_dynamic_style};
+use super::components::settings_section::create_settings_section_with_colors;
 use super::components::setting_row::create_setting_row;
 
 /// 创建外观设置区域
@@ -29,17 +29,27 @@ pub fn create_appearance_section(app: &ArxivManager) -> Element<'_, Message> {
                 )
                 .placeholder("Select language...")
                 .style(pick_list_dynamic_style(&app.settings.theme))
-                .into()
+                .text_size(app.current_font_size())
+                .font(app.current_font())
+                .into(),
+                app
             ),
-            create_theme_preview_row(&app.settings.theme),
+            create_theme_preview_row(&app.settings.theme, app),
+            // 字体设置
+            create_font_settings_row(app),
+            // 缩放设置
+            create_scale_settings_row(app),
         ],
-        theme_colors,
+        app,
     )
 }
 
 /// 创建主题选择器行，包含分类显示
 fn create_theme_selector_row(app: &ArxivManager) -> Element<'_, Message> {
     let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
     
     let theme_selector = pick_list(
         Theme::all_variants(),
@@ -47,16 +57,24 @@ fn create_theme_selector_row(app: &ArxivManager) -> Element<'_, Message> {
         Message::ThemeChanged,
     )
     .placeholder("Select theme...")
-    .style(pick_list_dynamic_style(&app.settings.theme));
+    .style(pick_list_dynamic_style(&app.settings.theme))
+    .text_size(base_font_size)
+    .font(current_font);
 
     let current_theme_info = container(
         column![
-            text(app.settings.theme.display_name()).size(14).color(theme_colors.text_primary),
-            text(format!("Category: {}", app.settings.theme.category())).size(12).color(theme_colors.text_muted),
+            text(app.settings.theme.display_name())
+                .size(base_font_size)
+                .font(current_font)
+                .color(theme_colors.text_primary),
+            text(format!("Category: {}", app.settings.theme.category()))
+                .size(base_font_size * 0.86)
+                .font(current_font)
+                .color(theme_colors.text_muted),
         ]
-        .spacing(4)
+        .spacing(4.0 * scale)
     )
-    .padding(8)
+    .padding(8.0 * scale)
     .style(theme_info_dynamic_style(&app.settings.theme));
 
     create_setting_row(
@@ -65,20 +83,27 @@ fn create_theme_selector_row(app: &ArxivManager) -> Element<'_, Message> {
             theme_selector,
             current_theme_info
         ]
-        .spacing(8)
-        .into()
+        .spacing(8.0 * scale)
+        .into(),
+        app
     )
 }
 
 /// 创建主题预览行
-fn create_theme_preview_row(theme: &Theme) -> Element<'_, Message> {
+fn create_theme_preview_row<'a>(theme: &Theme, app: &'a ArxivManager) -> Element<'a, Message> {
     let (bg_color, text_color, accent_color) = get_theme_preview(theme);
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
     
     let preview_container = container(
         row![
             // 背景色预览
-            container(text("BG").color(text_color).size(12))
-                .padding(8)
+            container(text("BG")
+                .color(text_color)
+                .size(base_font_size * 0.86)
+                .font(current_font))
+                .padding(8.0 * scale)
                 .style(move |_| container::Style {
                     background: Some(Background::Color(bg_color)),
                     border: Border {
@@ -90,8 +115,11 @@ fn create_theme_preview_row(theme: &Theme) -> Element<'_, Message> {
                 }),
             
             // 文本色预览  
-            container(text("Text").color(text_color).size(12))
-                .padding(8)
+            container(text("Text")
+                .color(text_color)
+                .size(base_font_size * 0.86)
+                .font(current_font))
+                .padding(8.0 * scale)
                 .style(move |_| container::Style {
                     background: Some(Background::Color(bg_color)),
                     border: Border {
@@ -103,8 +131,11 @@ fn create_theme_preview_row(theme: &Theme) -> Element<'_, Message> {
                 }),
                 
             // 强调色预览
-            container(text("Accent").color(bg_color).size(12))
-                .padding(8)
+            container(text("Accent")
+                .color(bg_color)
+                .size(base_font_size * 0.86)
+                .font(current_font))
+                .padding(8.0 * scale)
                 .style(move |_| container::Style {
                     background: Some(Background::Color(accent_color)),
                     border: Border {
@@ -120,19 +151,21 @@ fn create_theme_preview_row(theme: &Theme) -> Element<'_, Message> {
             // 主题类型指示器
             container(
                 text(if theme.is_dark() { "🌙 Dark" } else { "☀️ Light" })
-                    .size(12)
+                    .size(base_font_size * 0.86)
+                    .font(current_font)
                     .color(text_color) // 使用动态文本颜色
-            ).padding(4),
+            ).padding(4.0 * scale),
         ]
-        .spacing(8)
+        .spacing(8.0 * scale)
         .align_y(iced::Alignment::Center)
     )
-    .padding(12)
+    .padding(12.0 * scale)
     .style(preview_container_dynamic_style(theme));
 
     create_setting_row(
         "Preview:",
-        preview_container.into()
+        preview_container.into(),
+        app
     )
 }
 
@@ -166,4 +199,132 @@ fn preview_container_dynamic_style(theme: &Theme) -> impl Fn(&iced::Theme) -> co
         text_color: Some(colors.text_primary),
         shadow: iced::Shadow::default(),
     }
+}
+
+/// 创建字体设置行
+fn create_font_settings_row(app: &ArxivManager) -> Element<'_, Message> {
+    let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
+    
+    let font_families = vec![
+        "系统默认".to_string(),
+        "Arial".to_string(),
+        "Helvetica".to_string(),
+        "Times New Roman".to_string(),
+        "Courier New".to_string(),
+        "Georgia".to_string(),
+        "Verdana".to_string(),
+        "Tahoma".to_string(),
+        "Trebuchet MS".to_string(),
+        "Comic Sans MS".to_string(),
+        "Impact".to_string(),
+        "Lucida Console".to_string(),
+        "Palatino".to_string(),
+        "Garamond".to_string(),
+        "Book Antiqua".to_string(),
+        "Century Gothic".to_string(),
+        "Franklin Gothic Medium".to_string(),
+        "Gill Sans".to_string(),
+        "Lucida Sans".to_string(),
+        "MS Sans Serif".to_string(),
+        "MS Serif".to_string(),
+        "Segoe UI".to_string(),
+        "Calibri".to_string(),
+        "Cambria".to_string(),
+        "Consolas".to_string(),
+        "微软雅黑".to_string(),
+        "宋体".to_string(),
+        "黑体".to_string(),
+        "楷体".to_string(),
+        "仿宋".to_string(),
+    ];
+    
+    create_setting_row(
+        "Font Family:",
+        column![
+            pick_list(
+                font_families,
+                Some(app.settings.font_family.clone()),
+                Message::FontFamilyChanged,
+            )
+            .placeholder("Select font family...")
+            .style(pick_list_dynamic_style(&app.settings.theme))
+            .text_size(base_font_size)
+            .font(current_font),
+            
+            row![
+                text("Font Size:")
+                    .color(theme_colors.text_secondary)
+                    .size(base_font_size)
+                    .font(current_font),
+                horizontal_space(),
+                text_input("14", &app.settings.font_size.to_string())
+                    .on_input(Message::FontSizeChanged)
+                    .style(text_input_dynamic_style(&app.settings.theme))
+                    .size(base_font_size)
+                    .font(current_font)
+                    .width((80.0 * scale) as u16),
+                text("px")
+                    .color(theme_colors.text_muted)
+                    .size(base_font_size * 0.86)
+                    .font(current_font),
+            ]
+            .spacing(8.0 * scale)
+            .align_y(iced::Alignment::Center),
+            
+            slider(8.0..=72.0, app.settings.font_size, |value| Message::FontSizeChanged(value.to_string()))
+                .step(1.0)
+                .width(iced::Length::Fill),
+        ]
+        .spacing(8)
+        .into(),
+        app
+    )
+}
+
+/// 创建缩放设置行
+fn create_scale_settings_row(app: &ArxivManager) -> Element<'_, Message> {
+    let theme_colors = app.theme_colors();
+    let current_font = app.current_font();
+    let base_font_size = app.current_font_size();
+    let scale = app.current_scale();
+    
+    create_setting_row(
+        "UI Scale:",
+        column![
+            row![
+                text("Scale Factor:")
+                    .color(theme_colors.text_secondary)
+                    .size(base_font_size)
+                    .font(current_font),
+                horizontal_space(),
+                text_input("1.0", &app.settings.ui_scale.to_string())
+                    .on_input(Message::UIScaleChanged)
+                    .style(text_input_dynamic_style(&app.settings.theme))
+                    .size(base_font_size)
+                    .font(current_font)
+                    .width((80.0 * scale) as u16),
+                text("x")
+                    .color(theme_colors.text_muted)
+                    .size(base_font_size * 0.86)
+                    .font(current_font),
+            ]
+            .spacing(8.0 * scale)
+            .align_y(iced::Alignment::Center),
+            
+            slider(0.5..=3.0, app.settings.ui_scale, |value| Message::UIScaleChanged(value.to_string()))
+                .step(0.1)
+                .width(iced::Length::Fill),
+                
+            text(format!("Current: {:.1}x ({}%)", app.settings.ui_scale, (app.settings.ui_scale * 100.0) as u32))
+                .color(theme_colors.text_muted)
+                .size(base_font_size * 0.86)
+                .font(current_font),
+        ]
+        .spacing(8.0 * scale)
+        .into(),
+        app
+    )
 }
