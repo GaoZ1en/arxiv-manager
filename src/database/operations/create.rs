@@ -12,7 +12,7 @@ pub fn insert_paper(conn: &Connection, paper: &ArxivPaper) -> Result<i64> {
     let authors_json = serde_json::to_string(&paper.authors)?;
     let categories_json = serde_json::to_string(&paper.categories)?;
     
-    let id = conn.execute(
+    let _id = conn.execute(
         r#"
         INSERT INTO papers (
             arxiv_id, title, authors, abstract, categories,

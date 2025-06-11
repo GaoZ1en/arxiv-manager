@@ -1,7 +1,7 @@
 // 外观设置页面 - 主题和语言配置
 
 use iced::widget::pick_list;
-use iced::{Element, Background, Border, Color};
+use iced::{Element, Background, Border};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::models::{Theme, Language};
@@ -11,7 +11,7 @@ use super::components::settings_section::create_settings_section;
 use super::components::setting_row::create_setting_row;
 
 /// 创建外观设置区域
-pub fn create_appearance_section(app: &ArxivManager) -> Element<Message> {
+pub fn create_appearance_section(app: &ArxivManager) -> Element<'_, Message> {
     create_settings_section(
         "Appearance",
         GRUVBOX_BLUE,

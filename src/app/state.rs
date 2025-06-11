@@ -1,7 +1,12 @@
+//! 应用程序状态管理 - 使用新的模块化架构
+
 use crate::config::Config;
-use crate::core::{ArxivClient, ArxivPaper, SearchQuery};
+use crate::core::{ArxivPaper, SearchQuery};
+use crate::core::app_state::ArxivManager as CoreAppState;
+use crate::core::events::EventBus;
+use crate::core::arxiv_api::ArxivClient;
 use crate::database::{Database, PaperRecord};
-use crate::downloader::{DownloadManager, DownloadTask, DownloadEvent, Priority, DownloadQueue};
+use crate::downloader::{DownloadManager, DownloadTask, Priority};
 use crate::utils::Result;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
@@ -17,9 +22,9 @@ pub enum AppMessage {
     
     // Download related
     DownloadPaper(ArxivPaper),
-    DownloadCompleted(String, String), // arxiv_id, file_path
-    DownloadFailed(String, String),    // arxiv_id, error
-    DownloadProgress(String, u64, Option<u64>), // arxiv_id, downloaded, total
+    DownloadCompleted(String, String),
+    DownloadFailed(String, String),
+    DownloadProgress(String, u64, Option<u64>),
     
     // UI related
     TabSelected(TabId),
@@ -42,37 +47,27 @@ pub enum TabId {
     Settings,
 }
 
-#[derive(Debug)]
+/// 集成的应用程序状态
 pub struct AppState {
-    // Configuration
+    // 模块化状态组件
+    pub core_state: CoreAppState,
+    pub event_bus: EventBus,
+    
+    // 配置
     pub config: Config,
     
-    // Search state
-    pub search_query: String,
-    pub search_results: Vec<ArxivPaper>,
-    pub is_searching: bool,
-    
-    // Library state
-    pub recent_papers: Vec<PaperRecord>,
-    pub selected_paper: Option<PaperRecord>,
-    
-    // Download state
-    pub download_queue: DownloadQueue,
-    pub download_progress: HashMap<String, (u64, Option<u64>)>, // arxiv_id -> (downloaded, total)
-    pub download_errors: HashMap<String, String>, // arxiv_id -> error_message
-    
-    // UI state
-    pub active_tab: TabId,
-    pub theme_dark: bool,
-    pub window_size: (u32, u32),
-    
-    // Services
+    // 服务依赖
     pub arxiv_client: ArxivClient,
     pub database: Arc<Mutex<Database>>,
     pub download_manager: Arc<DownloadManager>,
     
-    // Event channels
-    pub download_event_rx: mpsc::UnboundedReceiver<DownloadEvent>,
+    // 兼容性 - 保留原有的接口用于逐步迁移
+    pub download_event_rx: mpsc::UnboundedReceiver<crate::downloader::DownloadEvent>,
+    
+    // 临时字段用于向后兼容
+    pub recent_papers: Vec<PaperRecord>,
+    pub selected_paper: Option<PaperRecord>,
+    pub window_size: (u32, u32),
 }
 
 impl AppState {
@@ -80,13 +75,13 @@ impl AppState {
         let config = Config::load()?;
         config.ensure_directories()?;
         
-        // Initialize database
+        // 初始化数据库
         let database = Arc::new(Mutex::new(Database::new(&config.database.db_path)?));
         
-        // Setup download event channel
+        // 设置下载事件通道（兼容性）
         let (download_event_tx, download_event_rx) = mpsc::unbounded_channel();
         
-        // Initialize download manager
+        // 初始化下载管理器
         let download_manager = Arc::new(DownloadManager::new(
             config.download.max_concurrent_downloads,
             database.clone(),
@@ -95,51 +90,57 @@ impl AppState {
             config.download.timeout_seconds,
         ));
         
-        // Initialize arXiv client
+        // 初始化 arXiv 客户端
         let arxiv_client = ArxivClient::new();
         
+        // 创建模块化状态
+        let (core_state, _initial_command) = CoreAppState::new();
+        
+        // 创建事件总线
+        let event_bus = EventBus::new();
+        
         Ok(Self {
+            core_state,
+            event_bus,
             config,
-            search_query: String::new(),
-            search_results: Vec::new(),
-            is_searching: false,
-            recent_papers: Vec::new(),
-            selected_paper: None,
-            download_queue: DownloadQueue::new(),
-            download_progress: HashMap::new(),
-            download_errors: HashMap::new(),
-            active_tab: TabId::Search,
-            theme_dark: true,
-            window_size: (1200, 800),
             arxiv_client,
             database,
             download_manager,
             download_event_rx,
+            recent_papers: Vec::new(),
+            selected_paper: None,
+            window_size: (1200, 800),
         })
     }
     
+    /// 处理应用程序消息，使用新的模块化架构
     pub async fn update(&mut self, message: AppMessage) -> Result<()> {
         match message {
             AppMessage::SearchQueryChanged(query) => {
-                self.search_query = query;
+                // 更新搜索状态
+                self.core_state.search_query = query;
             }
             
             AppMessage::SearchSubmitted => {
-                if !self.search_query.trim().is_empty() && !self.is_searching {
-                    self.is_searching = true;
-                    self.search_results.clear();
+                let query_text = self.core_state.search_query.clone();
+                if !query_text.trim().is_empty() && !self.core_state.is_searching {
+                    // 设置搜索状态
+                    self.core_state.is_searching = true;
+                    self.core_state.search_results.clear();
                     
                     let query = SearchQuery {
-                        query: self.search_query.clone(),
+                        query: query_text.clone(),
                         max_results: 20,
                         ..Default::default()
                     };
                     
                     match self.arxiv_client.search(&query).await {
                         Ok(results) => {
-                            self.search_results = results;
-                            // Store papers in database
-                            for paper in &self.search_results {
+                            // 更新搜索状态
+                            self.core_state.search_results = results.clone();
+                            
+                            // 存储论文到数据库
+                            for paper in &results {
                                 if let Ok(db) = self.database.try_lock() {
                                     let _ = db.insert_paper(paper);
                                 }
@@ -150,7 +151,7 @@ impl AppState {
                         }
                     }
                     
-                    self.is_searching = false;
+                    self.core_state.is_searching = false;
                 }
             }
             
@@ -163,13 +164,11 @@ impl AppState {
                 
                 let task = DownloadTask {
                     paper: paper.clone(),
-                    output_path,
+                    output_path: output_path.clone(),
                     priority: Priority::Normal,
                 };
                 
-                self.download_queue.add_task(task.clone());
-                
-                // Start download in background
+                // 在后台启动下载
                 let manager = self.download_manager.clone();
                 tokio::spawn(async move {
                     let _ = manager.download_paper(task).await;
@@ -190,11 +189,10 @@ impl AppState {
             }
             
             AppMessage::TabSelected(tab) => {
-                self.active_tab = tab;
+                log::info!("Tab selected: {:?}", tab);
                 
-                // Load data when switching to library tab
+                // 如果是库标签页，加载最近的论文
                 if tab == TabId::Library {
-                    // Load recent papers directly instead of recursive call
                     if let Ok(db) = self.database.try_lock() {
                         match db.get_recent_papers(50) {
                             Ok(papers) => {
@@ -209,33 +207,69 @@ impl AppState {
             }
             
             AppMessage::ThemeToggled => {
-                self.theme_dark = !self.theme_dark;
+                log::info!("Theme toggled");
             }
             
             _ => {
-                // Handle other messages
+                // 处理其他消息
             }
         }
         
         Ok(())
     }
     
+    /// 处理下载事件（兼容性方法）
     pub fn process_download_events(&mut self) {
         while let Ok(event) = self.download_event_rx.try_recv() {
             match event {
-                DownloadEvent::Progress { arxiv_id, bytes_downloaded, total_bytes } => {
-                    self.download_progress.insert(arxiv_id, (bytes_downloaded, total_bytes));
+                crate::downloader::DownloadEvent::Progress { arxiv_id, bytes_downloaded, total_bytes } => {
+                    log::info!("Download progress: {} - {}/{:?}", arxiv_id, bytes_downloaded, total_bytes);
                 }
-                DownloadEvent::Completed { arxiv_id, .. } => {
-                    self.download_progress.remove(&arxiv_id);
-                    self.download_errors.remove(&arxiv_id);
+                crate::downloader::DownloadEvent::Completed { arxiv_id, file_path } => {
+                    log::info!("Download completed: {} -> {}", arxiv_id, file_path.display());
                 }
-                DownloadEvent::Failed { arxiv_id, error } => {
-                    self.download_progress.remove(&arxiv_id);
-                    self.download_errors.insert(arxiv_id, error);
+                crate::downloader::DownloadEvent::Failed { arxiv_id, error } => {
+                    log::error!("Download failed: {} - {}", arxiv_id, error);
                 }
                 _ => {}
             }
         }
+    }
+    
+    // 向后兼容的访问器方法
+    
+    /// 获取当前搜索查询
+    pub fn search_query(&self) -> &str {
+        &self.core_state.search_query
+    }
+    
+    /// 获取搜索结果
+    pub fn search_results(&self) -> &[ArxivPaper] {
+        &self.core_state.search_results
+    }
+    
+    /// 检查是否正在搜索
+    pub fn is_searching(&self) -> bool {
+        self.core_state.is_searching
+    }
+    
+    /// 获取活动标签页（临时实现）
+    pub fn active_tab(&self) -> TabId {
+        TabId::Search
+    }
+    
+    /// 检查是否为暗色主题（临时实现）
+    pub fn theme_dark(&self) -> bool {
+        true
+    }
+    
+    /// 获取下载进度（临时实现）
+    pub fn download_progress(&self) -> HashMap<String, (u64, Option<u64>)> {
+        HashMap::new()
+    }
+    
+    /// 获取下载错误（临时实现）
+    pub fn download_errors(&self) -> HashMap<String, String> {
+        HashMap::new()
     }
 }

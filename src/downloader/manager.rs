@@ -14,6 +14,7 @@ use tokio::sync::{Semaphore, mpsc, Mutex};
 
 /// 下载管理器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct DownloadManager {
     client: Client,
     semaphore: Arc<Semaphore>,

@@ -11,7 +11,7 @@ use crate::ui::theme::*;
 pub struct LibraryView;
 
 impl LibraryView {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let content = if app.saved_papers.is_empty() {
             column![iced::widget::text("No saved papers").color(GRUVBOX_TEXT_MUTED)]
         } else {

@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum ArxivError {
     #[error("网络请求失败: {0}")]
@@ -36,4 +37,5 @@ pub enum ArxivError {
     Unknown(String),
 }
 
+#[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, ArxivError>;

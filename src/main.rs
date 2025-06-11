@@ -9,7 +9,7 @@ mod utils;
 use core::ArxivManager;
 
 // 确保所有UI实现被包含
-use ui::*;
+// use ui::*;
 
 fn main() -> iced::Result {
     env_logger::init();

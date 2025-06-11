@@ -16,7 +16,7 @@ pub struct SettingsView;
 
 impl SettingsView {
     /// 创建设置视图的主界面
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let title = text("Settings")
             .color(GRUVBOX_TEXT)
             .size(28);

@@ -10,7 +10,7 @@ use super::components::settings_section::create_settings_section;
 use super::components::setting_row::create_setting_row;
 
 /// 创建下载设置区域
-pub fn create_downloads_section(app: &ArxivManager) -> Element<Message> {
+pub fn create_downloads_section(app: &ArxivManager) -> Element<'_, Message> {
     create_settings_section(
         "Downloads",
         GRUVBOX_GREEN,

@@ -1,6 +1,6 @@
 // 下载器类型定义模块
 
-use crate::core::models::ArxivPaper;
+use crate::core::ArxivPaper;
 use std::path::PathBuf;
 
 /// 下载任务

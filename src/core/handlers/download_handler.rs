@@ -40,6 +40,7 @@ impl DownloadHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_download_cancel(&mut self, paper_id: String) -> Task<Message> {
         if let Some(download) = self.downloads.iter_mut().find(|d| d.paper_id == paper_id) {
             match download.status {
@@ -53,6 +54,7 @@ impl DownloadHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_download_retry(&mut self, paper_id: String) -> Task<Message> {
         if let Some(download) = self.downloads.iter_mut().find(|d| d.paper_id == paper_id) {
             download.status = DownloadStatus::Pending;
@@ -89,6 +91,7 @@ impl DownloadHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_download_clear_completed(&mut self) -> Task<Message> {
         self.downloads.retain(|d| !matches!(d.status, DownloadStatus::Completed));
         Task::none()

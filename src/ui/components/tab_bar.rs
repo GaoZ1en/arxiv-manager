@@ -12,7 +12,7 @@ use crate::ui::theme::*;
 pub struct TabBar;
 
 impl TabBar {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let mut tabs_row = row![].spacing(2);
 
         for (index, tab) in app.tabs.iter().enumerate() {

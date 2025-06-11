@@ -1,5 +1,8 @@
 // UI相关的数据模型
 
+// UI相关的数据模型
+
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PaneType {
     Search,
@@ -9,6 +12,7 @@ pub enum PaneType {
     PaperView(usize),
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Pane {
     pub pane_type: PaneType,

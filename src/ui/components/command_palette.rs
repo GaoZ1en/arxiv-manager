@@ -10,7 +10,7 @@ use crate::ui::theme::*;
 pub struct CommandPalette;
 
 impl CommandPalette {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         // 命令栏主体
         let command_input = text_input("Type a command...", &app.command_palette_input)
             .on_input(Message::CommandPaletteInputChanged)

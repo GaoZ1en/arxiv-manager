@@ -65,6 +65,7 @@ impl PaperHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_paper_view(&mut self, paper: ArxivPaper) -> Task<Message> {
         // 查找或创建论文在saved_papers中的索引
         let paper_index = if let Some(index) = self.saved_papers.iter().position(|p| p.id == paper.id) {
@@ -93,6 +94,7 @@ impl PaperHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_paper_export(&mut self, format: String) -> Task<Message> {
         // TODO: 实现论文导出功能
         println!("Exporting papers to format: {}", format);
@@ -100,6 +102,7 @@ impl PaperHandler for ArxivManager {
     }
 
     // 辅助方法实现
+    #[allow(dead_code)]
     fn get_current_paper(&self) -> Option<ArxivPaper> {
         // 从当前活动标签页获取论文
         if let Some(current_tab) = self.tabs.get(self.active_tab) {

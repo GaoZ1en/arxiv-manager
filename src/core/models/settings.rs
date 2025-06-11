@@ -103,7 +103,9 @@ impl KeyboardShortcuts {
 #[derive(Debug, Clone)]
 pub struct ShortcutKey {
     pub display: String,
+    #[allow(dead_code)]
     pub modifiers: Vec<String>,
+    #[allow(dead_code)]
     pub key: String,
 }
 
@@ -132,6 +134,7 @@ impl ShortcutKey {
         !shortcut.trim().is_empty() && shortcut.contains('+')
     }
 
+    #[allow(dead_code)]
     pub fn parse_shortcut(shortcut: &str) -> Option<Self> {
         if Self::is_valid_shortcut(shortcut) {
             Some(Self::new(shortcut))

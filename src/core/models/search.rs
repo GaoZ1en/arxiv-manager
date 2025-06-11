@@ -75,6 +75,7 @@ impl SearchField {
 }
 
 // 日期范围
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum DateRange {
     Any,

@@ -10,7 +10,7 @@ use crate::ui::components::{TabBar, Sidebar, CommandPalette};
 use crate::ui::views::{SearchView, LibraryView, DownloadsView, SettingsView, PaperView};
 
 impl ArxivManager {
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         let sidebar = if self.sidebar_visible {
             Some(Sidebar::view(self))
         } else {

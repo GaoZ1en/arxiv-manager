@@ -16,7 +16,7 @@ use crate::ui::theme::*;
 pub struct SearchView;
 
 impl SearchView {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let search_input = text_input("Search arXiv papers...", &app.search_query)
             .on_input(Message::SearchQueryChanged)
             .on_submit(Message::SearchSubmitted)
@@ -90,7 +90,7 @@ impl SearchView {
         .into()
     }
 
-    fn advanced_search_panel(app: &ArxivManager) -> Element<Message> {
+    fn advanced_search_panel(app: &ArxivManager) -> Element<'_, Message> {
         // 搜索字段选择
         let search_field_list = pick_list(
             SearchField::all_variants(),

@@ -49,7 +49,12 @@ pub enum Message {
     ExportSettings,
     ImportSettings,
     // 快捷键设置
-    ShortcutChanged { action: String, shortcut: String },
+    ShortcutChanged { 
+        #[allow(dead_code)]
+        action: String, 
+        #[allow(dead_code)]
+        shortcut: String 
+    },
     ShortcutEditStarted(String), // 开始编辑某个快捷键
     ShortcutEditCancelled,       // 取消编辑快捷键
     ShortcutInputChanged(String), // 快捷键输入改变
@@ -92,6 +97,7 @@ pub enum Command {
     SplitPaneVertical,
     CloseCurrentPane,
     // 文件操作
+    #[allow(dead_code)]
     OpenPaper(String), // paper title or id
     SaveCurrentPaper,
     DownloadCurrentPaper,

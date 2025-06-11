@@ -3,4 +3,3 @@
 pub mod xml_parser;
 
 // 重新导出解析功能
-pub use xml_parser::*;

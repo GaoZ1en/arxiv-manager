@@ -46,6 +46,11 @@ impl DownloadQueue {
     pub fn len(&self) -> usize {
         self.tasks.len()
     }
+    
+    /// 检查队列中是否包含指定的 arxiv_id
+    pub fn contains_task(&self, arxiv_id: &str) -> bool {
+        self.tasks.iter().any(|task| task.paper.id == arxiv_id)
+    }
 }
 
 impl Default for DownloadQueue {

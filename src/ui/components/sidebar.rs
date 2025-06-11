@@ -12,7 +12,7 @@ use crate::ui::theme::*;
 pub struct Sidebar;
 
 impl Sidebar {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let toggle_button = button(text("☰").color(GRUVBOX_TEXT))
             .on_press(Message::SidebarToggled)
             .style(button_secondary_style);

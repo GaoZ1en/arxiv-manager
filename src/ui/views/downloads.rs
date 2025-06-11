@@ -11,7 +11,7 @@ use crate::ui::theme::*;
 pub struct DownloadsView;
 
 impl DownloadsView {
-    pub fn view(app: &ArxivManager) -> Element<Message> {
+    pub fn view(app: &ArxivManager) -> Element<'_, Message> {
         let content = if app.downloads.is_empty() {
             column![iced::widget::text("No downloads").color(GRUVBOX_TEXT_MUTED)]
         } else {

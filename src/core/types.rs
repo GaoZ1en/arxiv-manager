@@ -20,12 +20,17 @@ pub struct ArxivPaper {
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
     pub query: String,
+    #[allow(dead_code)]
     pub max_results: usize,
+    #[allow(dead_code)]
     pub start: usize,
+    #[allow(dead_code)]
     pub sort_by: SortBy,
+    #[allow(dead_code)]
     pub sort_order: SortOrder,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum SortBy {
     Relevance,

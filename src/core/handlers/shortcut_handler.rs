@@ -53,6 +53,7 @@ impl ShortcutHandler for ArxivManager {
         Task::none()
     }
 
+    #[allow(dead_code)]
     fn handle_shortcut_confirmed(&mut self) -> Task<Message> {
         // 克隆值以避免借用检查器问题
         if let Some(action) = self.editing_shortcut.clone() {
@@ -73,6 +74,7 @@ impl ShortcutHandler for ArxivManager {
     }
 
     // 辅助方法实现
+    #[allow(dead_code)]
     fn update_shortcut(&mut self, action: &str, shortcut: &str) {
         let new_shortcut = ShortcutKey::new(shortcut);
         

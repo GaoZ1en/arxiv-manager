@@ -4,6 +4,7 @@ use crate::utils::{ArxivError, Result};
 use reqwest::Client;
 use chrono::DateTime;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct ArxivClient {
     client: Client,

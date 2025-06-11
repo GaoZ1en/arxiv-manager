@@ -11,7 +11,7 @@ use super::components::settings_section::create_settings_section;
 use super::components::setting_row::create_setting_row;
 
 /// 创建快捷键设置区域
-pub fn create_shortcuts_section(app: &ArxivManager) -> Element<Message> {
+pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
     let shortcuts = app.settings.shortcuts.get_all_actions();
     let mut shortcut_items = Vec::new();
 

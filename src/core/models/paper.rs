@@ -8,12 +8,18 @@ pub struct ArxivPaper {
     pub authors: Vec<String>,
     pub abstract_text: String,
     pub published: String,
+    #[allow(dead_code)]
     pub updated: String,
     pub categories: Vec<String>,
+    #[allow(dead_code)]
     pub pdf_url: String,
+    #[allow(dead_code)]
     pub entry_url: String,
+    #[allow(dead_code)]
     pub doi: Option<String>,
+    #[allow(dead_code)]
     pub journal_ref: Option<String>,
+    #[allow(dead_code)]
     pub comments: Option<String>,
 }
 
@@ -35,6 +41,7 @@ pub enum DownloadStatus {
 }
 
 // 常用的arXiv分类 - 为理论物理工作者优化
+#[allow(dead_code)]
 pub const ARXIV_CATEGORIES: &[(&str, &str)] = &[
     // 物理学 - 理论物理核心领域
     ("hep-th", "High Energy Physics - Theory"),
