@@ -10,6 +10,7 @@ use crate::ui::theme::{get_theme_preview};
 use crate::ui::style::{pick_list_dynamic_style, text_input_dynamic_style};
 use super::components::settings_section::create_settings_section_with_colors;
 use super::components::setting_row::create_setting_row;
+use crate::ui::components::{emoji_text, emoji_text_colored};
 
 /// 创建外观设置区域
 pub fn create_appearance_section(app: &ArxivManager) -> Element<'_, Message> {
@@ -239,6 +240,11 @@ fn create_font_settings_row(app: &ArxivManager) -> Element<'_, Message> {
         "黑体".to_string(),
         "楷体".to_string(),
         "仿宋".to_string(),
+        // Emoji字体
+        "Noto Color Emoji".to_string(),
+        "Apple Color Emoji".to_string(),
+        "Segoe UI Emoji".to_string(),
+        "EmojiOne Color".to_string(),
     ];
     
     create_setting_row(

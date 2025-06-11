@@ -300,7 +300,7 @@ impl ArxivManager {
         crate::ui::theme::get_theme_colors(&self.settings.theme)
     }
     
-    /// 获取当前字体设置
+    /// 获取当前字体设置 (支持emoji)
     pub fn current_font(&self) -> iced::Font {
         match self.settings.font_family.as_str() {
             "系统默认" => iced::Font::default(),
@@ -318,8 +318,29 @@ impl ArxivManager {
             "黑体" => iced::Font::with_name("SimHei"),
             "楷体" => iced::Font::with_name("KaiTi"),
             "仿宋" => iced::Font::with_name("FangSong"),
+            // 支持emoji的字体
+            "Noto Color Emoji" => iced::Font::with_name("Noto Color Emoji"),
+            "Apple Color Emoji" => iced::Font::with_name("Apple Color Emoji"),
+            "Segoe UI Emoji" => iced::Font::with_name("Segoe UI Emoji"),
+            "EmojiOne Color" => iced::Font::with_name("EmojiOne Color"),
             _ => iced::Font::default(),
         }
+    }
+    
+    /// 获取emoji字体 (用于fallback)
+    pub fn emoji_font(&self) -> iced::Font {
+        // 根据操作系统选择合适的emoji字体
+        #[cfg(target_os = "windows")]
+        return iced::Font::with_name("Segoe UI Emoji");
+        
+        #[cfg(target_os = "macos")]
+        return iced::Font::with_name("Apple Color Emoji");
+        
+        #[cfg(target_os = "linux")]
+        return iced::Font::with_name("Noto Color Emoji");
+        
+        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+        return iced::Font::default();
     }
     
     /// 获取当前字体大小 (应用缩放)

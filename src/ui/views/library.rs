@@ -6,6 +6,7 @@ use iced::{Element, Length};
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
 use crate::ui::components::PaperCard;
+use crate::ui::components::{emoji_text, emoji_text_colored};
 use crate::ui::style::chat_container_dynamic_style;
 
 pub struct LibraryView;
@@ -19,10 +20,7 @@ impl LibraryView {
         
         let content = if app.saved_papers.is_empty() {
             column![
-                text("📚 Your Library")
-                    .color(theme_colors.text_primary)
-                    .size(base_font_size * 1.43)
-                    .font(current_font),
+                emoji_text_colored(app, "📚 Your Library", base_font_size * 1.43, theme_colors.text_primary),
                 text("No saved papers yet")
                     .color(theme_colors.text_muted)
                     .size(base_font_size * 1.14)
@@ -39,10 +37,7 @@ impl LibraryView {
             let papers_count = app.saved_papers.len();
             column![
                 container(
-                    text(format!("📚 Library ({} papers)", papers_count))
-                        .color(theme_colors.text_primary)
-                        .size(base_font_size * 1.29)
-                        .font(current_font)
+                    emoji_text_colored(app, &format!("📚 Library ({} papers)", papers_count), base_font_size * 1.29, theme_colors.text_primary)
                 )
                 .padding(iced::Padding {
                     top: 16.0 * scale,

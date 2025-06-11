@@ -8,6 +8,7 @@ use crate::core::models::TabContent;
 use crate::core::messages::Message;
 use crate::ui::style::{sidebar_item_style_dynamic, sidebar_container_dynamic_style};
 use crate::ui::theme::ThemeColors;
+use crate::ui::components::{emoji_text, emoji_text_colored};
 
 pub struct Sidebar;
 
@@ -21,7 +22,7 @@ impl Sidebar {
         let user_section = container(
             column![
                 row![
-                    text("📖").size(base_font_size * 1.4).font(current_font),
+                    emoji_text_colored(app, "📖", base_font_size * 1.4, theme_colors.text_primary),
                     text("ArXiv Manager")
                             .color(theme_colors.text_primary)
                             .size(base_font_size * 1.14)
@@ -168,10 +169,7 @@ fn sidebar_nav_item<'a>(icon: &'a str, label: &'a str, tab_index: usize, is_acti
         let theme_clone = theme.clone();
         button(
             row![
-                text(icon)
-                    .size(base_font_size * 1.14)
-                    .color(text_color)
-                    .font(current_font),
+                emoji_text_colored(app, icon, base_font_size * 1.14, text_color),
                 text(label)
                     .color(text_color)
                     .size(base_font_size)
@@ -192,10 +190,7 @@ fn sidebar_nav_item<'a>(icon: &'a str, label: &'a str, tab_index: usize, is_acti
     } else {
         button(
             row![
-                text(icon)
-                    .size(base_font_size * 1.14)
-                    .color(text_color)
-                    .font(current_font),
+                emoji_text_colored(app, icon, base_font_size * 1.14, text_color),
                 text(label)
                     .color(text_color)
                     .size(base_font_size)
