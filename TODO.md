@@ -22,11 +22,30 @@
 - ✅ 创建 `search/filters/` - 结果过滤功能
 - ✅ 修复所有编译错误
 
+### 4. 设置视图模块重构 (已完成)
+- ✅ 将 `ui/views/settings.rs` (307行) 拆分为模块化架构
+- ✅ 创建专门的设置子模块：
+  - `settings/appearance.rs` - 主题和语言设置
+  - `settings/downloads.rs` - 下载配置
+  - `settings/shortcuts.rs` - 快捷键设置
+  - `settings/components/` - 可复用设置组件
+- ✅ 修复所有编译错误和导入问题
+
+### 5. 下载器模块重构 (已完成)
+- ✅ 将 `downloader/mod.rs` (270行) 拆分为模块化架构
+- ✅ 创建专门的下载子模块：
+  - `downloader/types.rs` - 下载任务、优先级、事件类型定义
+  - `downloader/manager.rs` - 下载管理器实现
+  - `downloader/queue.rs` - 下载队列实现  
+  - `downloader/utils.rs` - 文件路径生成和清理工具
+- ✅ 修复所有编译错误和导入问题
+- ✅ 实现清晰的模块边界和职责分离
+
 ---
 
 ## 待完成的重构工作 🚧
 
-### 4. 数据库模块重构 (高优先级)
+### 6. 数据库模块重构 (高优先级)
 **目标文件**: `database/mod.rs` (318行)
 
 **计划结构**:
@@ -58,31 +77,7 @@ src/database/
 - [ ] 优化 CRUD 操作的组织结构
 - [ ] 简化 `mod.rs` 文件，仅保留接口定义
 
-### 5. 设置视图重构 (中优先级)
-**目标文件**: `ui/views/settings.rs` (307行)
-
-**计划结构**:
-```
-src/ui/views/settings/
-├── mod.rs (主要设置视图组装)
-├── appearance.rs     (主题、语言设置)
-├── shortcuts.rs      (快捷键配置)
-├── downloads.rs      (下载设置)
-├── advanced.rs       (高级设置)
-└── components/       (设置相关组件)
-    ├── mod.rs
-    ├── theme_selector.rs
-    ├── language_selector.rs
-    └── shortcut_editor.rs
-```
-
-**重构任务**:
-- [ ] 按功能区域拆分设置界面
-- [ ] 创建可复用的设置组件
-- [ ] 优化设置状态管理
-- [ ] 改进设置验证逻辑
-
-### 6. 主应用模块重构 (中优先级)
+### 7. 主应用模块重构 (中优先级)
 **目标文件**: `core/app.rs` 或主应用逻辑
 
 **计划结构**:
@@ -103,7 +98,7 @@ src/core/
     └── ui_events.rs
 ```
 
-### 7. UI组件重构 (低优先级)
+### 8. UI组件重构 (低优先级)
 **目标**: 优化UI组件的组织结构
 
 **计划结构**:
@@ -133,7 +128,7 @@ src/ui/
     └── sidebar.rs
 ```
 
-### 8. 配置管理重构 (低优先级)
+### 9. 配置管理重构 (低优先级)
 **目标**: 统一配置管理
 
 **计划结构**:
@@ -146,7 +141,7 @@ src/config/
 └── validation.rs     (配置验证)
 ```
 
-### 9. 错误处理重构 (低优先级)
+### 10. 错误处理重构 (低优先级)
 **目标**: 统一错误处理机制
 
 **计划结构**:
