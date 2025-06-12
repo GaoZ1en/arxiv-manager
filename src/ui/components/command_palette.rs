@@ -5,7 +5,7 @@ use iced::{Element, Length, Color, Background, Border, Shadow};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
-use crate::ui::theme::*;
+
 
 pub struct CommandPalette;
 

@@ -6,7 +6,7 @@ use iced::Element;
 use crate::core::models::{ArxivPaper};
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
-use crate::ui::style::chat_container_dynamic_style;
+use crate::ui::style::{chat_container_dynamic_style, scrollable_style_dynamic};
 
 pub struct PaperView;
 
@@ -30,18 +30,18 @@ impl PaperView {
             .width(iced::Length::Fill);
 
         let metadata_row = column![
-            text(format!("📅 Published: {}", paper.published))
+            text(format!("Published: {}", paper.published))
                 .color(theme_colors.text_muted)
                 .size(base_font_size)
                 .font(current_font),
-            text(format!("🏷️ Categories: {}", paper.categories.join(", ")))
+            text(format!("Categories: {}", paper.categories.join(", ")))
                 .color(theme_colors.text_muted)
                 .size(base_font_size)
                 .font(current_font),
         ]
         .spacing(8.0 * scale);
 
-        let abstract_title = text("📄 Abstract")
+        let abstract_title = text("Abstract")
             .color(theme_colors.info_color)
             .size(base_font_size * 1.43)
             .font(current_font)
@@ -70,6 +70,7 @@ impl PaperView {
                 .spacing(12.0 * scale)
                 .padding([24.0 * scale, 24.0 * scale])
             )
+            .style(scrollable_style_dynamic(&app.settings.theme))
         )
         .style(chat_container_dynamic_style(&app.settings.theme))
         .padding(16.0 * scale)

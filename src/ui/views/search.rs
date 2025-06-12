@@ -9,7 +9,7 @@ use iced::{Element, Length, Background, Border, Shadow};
 use crate::core::app_state::ArxivManager;
 use crate::core::models::{SearchField, SortBy, SortOrder, DateRange, ArxivCategory};
 use crate::core::messages::Message;
-use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, text_input_dynamic_style, chat_container_dynamic_style, pick_list_dynamic_style};
+use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, text_input_dynamic_style, chat_container_dynamic_style, pick_list_dynamic_style, scrollable_style_dynamic};
 use crate::ui::components::WaterfallLayout;
 
 pub struct SearchView;
@@ -60,8 +60,8 @@ impl SearchView {
         if app.show_search_suggestions && !app.search_suggestions.is_empty() {
             let suggestions = column(
                 app.search_suggestions.iter().map(|suggestion| {
-                    let (display_text, message) = if suggestion.starts_with("按作者搜索: ") {
-                        let author_name = suggestion[12..].to_string(); // 去掉"按作者搜索: "前缀
+                    let (display_text, message) = if suggestion.starts_with("Search by author: ") {
+                        let author_name = suggestion[18..].to_string(); // 去掉"Search by author: "前缀
                         (suggestion.clone(), Message::SearchByAuthor(author_name))
                     } else {
                         (suggestion.clone(), Message::SearchSuggestionSelected(suggestion.clone()))
@@ -191,6 +191,7 @@ impl SearchView {
                     .padding(16.0 * scale)
                     .width(Length::Fill)
             )
+            .style(scrollable_style_dynamic(&app.settings.theme))
             .height(Length::Fill)
             .on_scroll(|viewport| {
                 // 检测是否滚动到了底部（留一些缓冲区域）
@@ -225,6 +226,8 @@ impl SearchView {
         )
         .placeholder("Search in...")
         .style(pick_list_dynamic_style(&app.settings.theme))
+        .text_size(base_font_size)
+        .font(current_font)
         .padding(8.0 * scale);
 
         // 排序选项
@@ -235,6 +238,8 @@ impl SearchView {
         )
         .placeholder("Sort by...")
         .style(pick_list_dynamic_style(&app.settings.theme))
+        .text_size(base_font_size)
+        .font(current_font)
         .padding(8.0 * scale);
 
         let sort_order_list = pick_list(
@@ -244,6 +249,8 @@ impl SearchView {
         )
         .placeholder("Order...")
         .style(pick_list_dynamic_style(&app.settings.theme))
+        .text_size(base_font_size)
+        .font(current_font)
         .padding(8.0 * scale);
 
         // 最大结果数
@@ -270,6 +277,8 @@ impl SearchView {
         )
         .placeholder("Date range...")
         .style(pick_list_dynamic_style(&app.settings.theme))
+        .text_size(base_font_size)
+        .font(current_font)
         .padding(8.0 * scale);
 
         // 类别选择

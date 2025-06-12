@@ -8,11 +8,13 @@ pub mod types;
 pub mod handlers;
 pub mod state;
 pub mod events;
+pub mod session;
 
 // 重新导出主要类型
 pub use models::*;
 pub use messages::*;
 pub use app_state::*;
+pub use session::*;
 // pub use arxiv_api::*;
 // 只导出 types 中不冲突的类型
 pub use types::{SearchQuery};

@@ -10,7 +10,8 @@ use iced::{Element, Background, Border, Shadow};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
-use crate::ui::theme::*;
+use crate::ui::style::scrollable_style_dynamic;
+
 
 pub struct SettingsView;
 
@@ -49,6 +50,7 @@ impl SettingsView {
                     shortcuts_section,
                 ].spacing(10.0 * scale)
             )
+            .style(scrollable_style_dynamic(&app.settings.theme))
         )
         .padding(20.0 * scale)
         .style(move |_theme| iced::widget::container::Style {

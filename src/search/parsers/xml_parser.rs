@@ -4,6 +4,27 @@ use crate::core::models::ArxivPaper;
 
 /// 解析arXiv API返回的XML格式数据
 pub fn parse_arxiv_xml(xml_content: &str) -> Result<Vec<ArxivPaper>, String> {
+    if xml_content.trim().is_empty() {
+        return Err("Empty XML content received".to_string());
+    }
+    
+    // 检查是否包含错误信息
+    if xml_content.contains("<error>") || xml_content.contains("error") {
+        // 尝试提取错误信息
+        if let Some(error_msg) = extract_xml_content(xml_content, "error") {
+            return Err(format!("ArXiv API error: {}", error_msg));
+        }
+        // 如果找不到具体错误信息，但包含error标签
+        if xml_content.to_lowercase().contains("malformed") {
+            return Err("Malformed query. Please check your search terms.".to_string());
+        }
+    }
+    
+    // 检查是否为有效的Atom feed
+    if !xml_content.contains("<feed") && !xml_content.contains("<entry") {
+        return Err("Invalid XML format: Expected Atom feed from ArXiv API".to_string());
+    }
+    
     let mut papers = Vec::new();
     
     // 查找所有 <entry> 标签

@@ -1,6 +1,6 @@
 // 现代化主视图 - IRC客户端风格布局
 
-use iced::widget::{column, container, row, stack};
+use iced::widget::{column, container, row, stack, text, vertical_space};
 use iced::{Element, Length, Padding};
 
 use crate::core::app_state::ArxivManager;
@@ -45,11 +45,76 @@ impl ArxivManager {
                 }
             }
         } else {
+            // 美观的空白界面
+            let theme_colors = self.theme_colors();
+            let current_font = self.current_font();
+            let base_font_size = self.current_font_size();
+            let scale = self.current_scale();
+            
             container(
-                iced::widget::text("No active tab")
-                    .color(crate::ui::theme::TEXT_MUTED)
+                column![
+                    // 大型欢迎图标
+                    text("📚")
+                        .size(base_font_size * 4.0)
+                        .color(theme_colors.accent_border),
+                    
+                    // 主标题
+                    text("ArXiv Manager")
+                        .size(base_font_size * 1.8)
+                        .font(iced::Font {
+                            weight: iced::font::Weight::Bold,
+                            ..current_font
+                        })
+                        .color(theme_colors.text_primary),
+                    
+                    // 副标题
+                    text("Modern Research Paper Management")
+                        .size(base_font_size * 1.1)
+                        .color(theme_colors.text_secondary),
+                    
+                    // 分隔空间
+                    iced::widget::vertical_space().height(32.0 * scale),
+                    
+                    // 快速操作提示
+                    column![
+                        text("Get Started:")
+                            .size(base_font_size * 1.2)
+                            .font(iced::Font {
+                                weight: iced::font::Weight::Medium,
+                                ..current_font
+                            })
+                            .color(theme_colors.text_primary),
+                        
+                        iced::widget::vertical_space().height(16.0 * scale),
+                        
+                        // 操作提示列表
+                        column![
+                            text("• Click 'SEARCH' to find papers")
+                                .size(base_font_size)
+                                .color(theme_colors.text_secondary),
+                            text("• Browse your 'LIBRARY' for saved papers")
+                                .size(base_font_size)
+                                .color(theme_colors.text_secondary),
+                            text("• Check 'DOWNLOADS' for active transfers")
+                                .size(base_font_size)
+                                .color(theme_colors.text_secondary),
+                            text("• Customize in 'SETTINGS'")
+                                .size(base_font_size)
+                                .color(theme_colors.text_secondary),
+                        ]
+                        .spacing(8.0 * scale)
+                    ]
+                    .spacing(8.0 * scale)
+                ]
+                .spacing(16.0 * scale)
+                .align_x(iced::Alignment::Center)
+                .padding(48.0 * scale)
             )
             .style(chat_container_dynamic_style(&self.settings.theme))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
             .into()
         };
 
@@ -58,7 +123,7 @@ impl ArxivManager {
             column![
                 // 顶部标签栏 (类似IRC的频道标签)
                 container(TabBar::view(self))
-                    .padding(Padding::new(8.0)),
+                    .padding(Padding::new(4.0)),
                 
                 // 主内容区域
                 container(current_content)
@@ -85,10 +150,19 @@ impl ArxivManager {
             content_area.into()
         };
 
-        // 如果命令面板可见，添加覆盖层 (类似IRC的快速搜索)
-        if self.command_palette_visible {
-            let overlay = CommandPalette::view(self);
-            container(stack![base_layout, overlay])
+        // 如果命令面板或右键菜单可见，添加覆盖层 (类似IRC的快速搜索)
+        if self.command_palette_visible || self.context_menu.visible {
+            let mut overlays = vec![base_layout];
+            
+            if self.command_palette_visible {
+                overlays.push(CommandPalette::view(self));
+            }
+            
+            if self.context_menu.visible {
+                overlays.push(crate::ui::components::ContextMenu::view(&self.context_menu, self));
+            }
+            
+            container(stack(overlays))
                 .style(main_container_dynamic_style(&self.settings.theme))
                 .into()
         } else {

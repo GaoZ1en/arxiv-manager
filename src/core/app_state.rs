@@ -5,7 +5,7 @@ use std::time::Instant;
 use std::collections::HashMap;
 use iced::{Task, Subscription};
 
-use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent};
+use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent, SessionManager};
 use crate::core::messages::{Message, Command};
 
 // 导入所有处理器
@@ -19,7 +19,17 @@ use crate::core::handlers::{
 pub struct SearchCacheItem {
     pub results: Vec<ArxivPaper>,
     pub timestamp: Instant,
+    #[allow(dead_code)]
     pub config: SearchConfig,
+}
+
+// 搜索性能统计
+#[derive(Debug, Clone)]
+pub struct SearchPerformanceStats {
+    pub total_searches: u32,
+    pub cache_hits: u32,
+    pub average_response_time: f64,
+    pub last_search_duration: Option<std::time::Duration>,
 }
 
 pub struct ArxivManager {
@@ -46,6 +56,11 @@ pub struct ArxivManager {
     pub search_cache: HashMap<String, SearchCacheItem>,
     pub last_search_time: Option<Instant>,
     pub search_debounce_delay: std::time::Duration,
+    // 性能优化 - 智能缓存和并发搜索
+    pub query_similarity_cache: HashMap<String, Vec<String>>,
+    pub query_frequency: HashMap<String, u32>,
+    pub preload_queue: Vec<String>,
+    pub search_performance_stats: SearchPerformanceStats,
     // 搜索历史和建议
     pub search_history: Vec<String>,
     pub search_suggestions: Vec<String>,
@@ -60,21 +75,35 @@ pub struct ArxivManager {
     // 快捷键编辑状态
     pub editing_shortcut: Option<String>, // 正在编辑的快捷键动作
     pub shortcut_input: String,           // 快捷键输入缓存
+    // 右键菜单状态
+    pub context_menu: crate::ui::components::ContextMenuState,
 }
 
 impl ArxivManager {
     pub fn new() -> (Self, Task<Message>) {
-        // 创建默认标签页
-        let mut tabs = Vec::new();
-        tabs.push(Tab::new(0, "搜索".to_string(), TabContent::Search));
-        tabs.push(Tab::new(1, "论文库".to_string(), TabContent::Library));
-        tabs.push(Tab::new(2, "下载".to_string(), TabContent::Downloads));
-        tabs.push(Tab::new(3, "设置".to_string(), TabContent::Settings));
+        // 尝试加载保存的会话状态
+        let (tabs, active_tab, next_tab_id) = if SessionManager::session_exists() {
+            match SessionManager::load_session() {
+                Ok(session_data) => {
+                    log::info!("Loaded previous session with {} tabs", session_data.tabs.len());
+                    let tabs: Vec<Tab> = session_data.tabs.into_iter().map(|tab| tab.into()).collect();
+                    let active_tab = session_data.active_tab.min(tabs.len().saturating_sub(1));
+                    (tabs, active_tab, session_data.next_tab_id)
+                }
+                Err(e) => {
+                    log::warn!("Failed to load session, using default tabs: {}", e);
+                    Self::create_default_tabs()
+                }
+            }
+        } else {
+            log::info!("No previous session found, creating default tabs");
+            Self::create_default_tabs()
+        };
 
-        let manager = Self {
+        let mut manager = Self {
             tabs,
-            active_tab: 0,
-            next_tab_id: 4,
+            active_tab,
+            next_tab_id,
             sidebar_visible: true,
             search_query: String::new(),
             search_config: SearchConfig::default(),
@@ -95,6 +124,16 @@ impl ArxivManager {
             search_cache: HashMap::new(),
             last_search_time: None,
             search_debounce_delay: std::time::Duration::from_millis(300),
+            // 性能优化 - 智能缓存和并发搜索初始化
+            query_similarity_cache: HashMap::new(),
+            query_frequency: HashMap::new(),
+            preload_queue: Vec::new(),
+            search_performance_stats: SearchPerformanceStats {
+                total_searches: 0,
+                cache_hits: 0,
+                average_response_time: 0.0,
+                last_search_duration: None,
+            },
             // 搜索历史和建议初始化
             search_history: Vec::new(),
             search_suggestions: Vec::new(),
@@ -109,9 +148,22 @@ impl ArxivManager {
             // 快捷键编辑状态初始化
             editing_shortcut: None,
             shortcut_input: String::new(),
+            // 右键菜单状态初始化
+            context_menu: crate::ui::components::ContextMenuState::default(),
         };
 
+        // 确保标签页按分组排序
+        manager.sort_tabs_by_groups();
+
         (manager, Task::none())
+    }
+    
+    // 创建默认标签页的辅助方法
+    fn create_default_tabs() -> (Vec<Tab>, usize, usize) {
+        let mut tabs = Vec::new();
+        // 只创建搜索标签页，让用户通过侧边栏或快捷键添加其他标签页
+        tabs.push(Tab::new(0, "Search".to_string(), TabContent::Search));
+        (tabs, 0, 1)
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
@@ -123,6 +175,22 @@ impl ArxivManager {
             Message::NavigateToPreviousTab => self.handle_navigate_to_previous_tab(),
             Message::CloseActiveTab => self.handle_close_active_tab(),
             Message::NewTab(content) => self.handle_new_tab(content),
+            // 新的标签页操作
+            Message::TabRightClicked { tab_index, position } => self.handle_tab_right_clicked(tab_index, position),
+            Message::HideContextMenu => {
+                self.context_menu.visible = false;
+                Task::none()
+            },
+            Message::TabPin(tab_index) => self.handle_tab_pin(tab_index),
+            Message::TabUnpin(tab_index) => self.handle_tab_unpin(tab_index),
+            Message::TabMoveToGroup(tab_index, group) => self.handle_tab_move_to_group(tab_index, group),
+            Message::TabDuplicate(tab_index) => self.handle_tab_duplicate(tab_index),
+            Message::CloseTabsToRight(tab_index) => self.handle_close_tabs_to_right(tab_index),
+            Message::CloseOtherTabs(tab_index) => self.handle_close_other_tabs(tab_index),
+            Message::CloseTabsInGroup(group) => self.handle_close_tabs_in_group(group),
+            // 会话管理
+            Message::SaveSession => self.handle_save_session(),
+            Message::LoadSession => self.handle_load_session(),
 
             // 搜索相关消息 - 委托给 SearchHandler
             Message::SearchQueryChanged(query) => self.handle_search_query_changed(query),
@@ -300,10 +368,11 @@ impl ArxivManager {
         crate::ui::theme::get_theme_colors(&self.settings.theme)
     }
     
-    /// 获取当前字体设置 (支持emoji)
+    /// 获取当前字体设置
     pub fn current_font(&self) -> iced::Font {
-        match self.settings.font_family.as_str() {
-            "系统默认" => iced::Font::default(),
+        let font = match self.settings.font_family.as_str() {
+            "Nerd Font" => iced::Font::with_name("JetBrainsMono Nerd Font"),
+            "System Default" => iced::Font::default(),
             "Arial" => iced::Font::with_name("Arial"),
             "Times New Roman" => iced::Font::with_name("Times New Roman"),
             "Helvetica" => iced::Font::with_name("Helvetica"),
@@ -313,34 +382,13 @@ impl ArxivManager {
             "Calibri" => iced::Font::with_name("Calibri"),
             "Cambria" => iced::Font::with_name("Cambria"),
             "Consolas" => iced::Font::with_name("Consolas"),
-            "微软雅黑" => iced::Font::with_name("Microsoft YaHei"),
-            "宋体" => iced::Font::with_name("SimSun"),
-            "黑体" => iced::Font::with_name("SimHei"),
-            "楷体" => iced::Font::with_name("KaiTi"),
-            "仿宋" => iced::Font::with_name("FangSong"),
-            // 支持emoji的字体
-            "Noto Color Emoji" => iced::Font::with_name("Noto Color Emoji"),
-            "Apple Color Emoji" => iced::Font::with_name("Apple Color Emoji"),
-            "Segoe UI Emoji" => iced::Font::with_name("Segoe UI Emoji"),
-            "EmojiOne Color" => iced::Font::with_name("EmojiOne Color"),
+            "Courier New" => iced::Font::with_name("Courier New"),
+            "Tahoma" => iced::Font::with_name("Tahoma"),
+            "Trebuchet MS" => iced::Font::with_name("Trebuchet MS"),
             _ => iced::Font::default(),
-        }
-    }
-    
-    /// 获取emoji字体 (用于fallback)
-    pub fn emoji_font(&self) -> iced::Font {
-        // 根据操作系统选择合适的emoji字体
-        #[cfg(target_os = "windows")]
-        return iced::Font::with_name("Segoe UI Emoji");
+        };
         
-        #[cfg(target_os = "macos")]
-        return iced::Font::with_name("Apple Color Emoji");
-        
-        #[cfg(target_os = "linux")]
-        return iced::Font::with_name("Noto Color Emoji");
-        
-        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-        return iced::Font::default();
+        font
     }
     
     /// 获取当前字体大小 (应用缩放)
@@ -382,21 +430,18 @@ impl ArxivManager {
         
         // 检查是否是作者搜索模式
         let is_author_search = query_lower.starts_with("author:") || 
-                              query_lower.starts_with("作者:") ||
                               self.is_likely_author_name(current_query);
         
         if is_author_search {
             // 作者搜索建议
             let author_name = if query_lower.starts_with("author:") {
                 current_query[7..].trim()
-            } else if query_lower.starts_with("作者:") {
-                current_query[6..].trim()
             } else {
                 current_query.trim()
             };
             
             if !author_name.is_empty() {
-                suggestions.push(format!("按作者搜索: {}", author_name));
+                suggestions.push(format!("Search by author: {}", author_name));
             }
             
             // 一些知名理论物理学家建议
@@ -426,7 +471,7 @@ impl ArxivManager {
             for author in famous_authors {
                 if author.to_lowercase().contains(&author_name.to_lowercase()) 
                     && author != author_name {
-                    suggestions.push(format!("按作者搜索: {}", author));
+                    suggestions.push(format!("Search by author: {}", author));
                 }
             }
         } else {
@@ -505,5 +550,165 @@ impl ArxivManager {
         }
         
         false
+    }
+    
+    // ===================
+    // 性能优化相关方法
+    // ===================
+    
+    /// 计算查询相似度（简单的字符串距离算法）
+    pub fn calculate_query_similarity(&self, query1: &str, query2: &str) -> f64 {
+        let q1 = query1.to_lowercase();
+        let q2 = query2.to_lowercase();
+        
+        if q1 == q2 {
+            return 1.0;
+        }
+        
+        // 使用简单的Jaccard相似度
+        let words1: std::collections::HashSet<&str> = q1.split_whitespace().collect();
+        let words2: std::collections::HashSet<&str> = q2.split_whitespace().collect();
+        
+        let intersection = words1.intersection(&words2).count();
+        let union = words1.union(&words2).count();
+        
+        if union == 0 {
+            0.0
+        } else {
+            intersection as f64 / union as f64
+        }
+    }
+    
+    /// 查找相似的已缓存查询
+    pub fn find_similar_cached_queries(&self, query: &str, threshold: f64) -> Vec<String> {
+        let mut similar_queries = Vec::new();
+        
+        for cached_query in self.search_cache.keys() {
+            let similarity = self.calculate_query_similarity(query, cached_query);
+            if similarity >= threshold && similarity < 1.0 { // 不包括完全相同的查询
+                similar_queries.push(cached_query.clone());
+            }
+        }
+        
+        // 按相似度排序
+        similar_queries.sort_by(|a, b| {
+            let sim_a = self.calculate_query_similarity(query, a);
+            let sim_b = self.calculate_query_similarity(query, b);
+            sim_b.partial_cmp(&sim_a).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        similar_queries
+    }
+    
+    /// 更新查询频率统计
+    pub fn update_query_frequency(&mut self, query: &str) {
+        let normalized_query = query.trim().to_lowercase();
+        *self.query_frequency.entry(normalized_query).or_insert(0) += 1;
+    }
+    
+    /// 获取热门查询
+    pub fn get_popular_queries(&self, limit: usize) -> Vec<String> {
+        let mut queries: Vec<_> = self.query_frequency.iter().collect();
+        queries.sort_by(|a, b| b.1.cmp(a.1));
+        queries.into_iter()
+            .take(limit)
+            .map(|(query, _)| query.clone())
+            .collect()
+    }
+    
+    /// 预测下一个可能的查询
+    pub fn predict_next_queries(&self, current_query: &str) -> Vec<String> {
+        let mut predictions = Vec::new();
+        
+        // 基于历史查询模式预测
+        for history_query in &self.search_history {
+            if history_query.starts_with(current_query) && history_query != current_query {
+                predictions.push(history_query.clone());
+            }
+        }
+        
+        // 基于相似查询预测
+        let similar_queries = self.find_similar_cached_queries(current_query, 0.6);
+        predictions.extend(similar_queries);
+        
+        // 去重并限制数量
+        predictions.sort();
+        predictions.dedup();
+        predictions.truncate(5);
+        
+        predictions
+    }
+    
+    /// 更新搜索性能统计
+    pub fn update_search_performance(&mut self, duration: std::time::Duration, was_cache_hit: bool) {
+        self.search_performance_stats.total_searches += 1;
+        if was_cache_hit {
+            self.search_performance_stats.cache_hits += 1;
+        }
+        
+        self.search_performance_stats.last_search_duration = Some(duration);
+        
+        // 更新平均响应时间（移动平均）
+        let new_time = duration.as_millis() as f64;
+        let current_avg = self.search_performance_stats.average_response_time;
+        let total = self.search_performance_stats.total_searches as f64;
+        
+        self.search_performance_stats.average_response_time = 
+            (current_avg * (total - 1.0) + new_time) / total;
+    }
+    
+    /// 获取缓存命中率
+    pub fn get_cache_hit_rate(&self) -> f64 {
+        if self.search_performance_stats.total_searches == 0 {
+            0.0
+        } else {
+            self.search_performance_stats.cache_hits as f64 / 
+            self.search_performance_stats.total_searches as f64
+        }
+    }
+    
+    /// 智能缓存清理（保留热门和最近的查询）
+    pub fn smart_cache_cleanup(&mut self) {
+        const MAX_CACHE_SIZE: usize = 100;
+        const _MIN_FREQUENCY_THRESHOLD: u32 = 2;
+        
+        if self.search_cache.len() <= MAX_CACHE_SIZE {
+            return;
+        }
+        
+        let now = Instant::now();
+        let mut cache_scores: Vec<(String, f64)> = Vec::new();
+        
+        for (query, cache_item) in &self.search_cache {
+            let age_seconds = now.duration_since(cache_item.timestamp).as_secs() as f64;
+            let frequency = self.query_frequency.get(query).unwrap_or(&1);
+            
+            // 计算缓存项的重要性分数（频率高、时间新的分数高）
+            let score = (*frequency as f64) / (1.0 + age_seconds / 3600.0); // 以小时为单位的衰减
+            cache_scores.push((query.clone(), score));
+        }
+        
+        // 按分数排序，保留分数高的
+        cache_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        
+        let keep_queries: std::collections::HashSet<String> = cache_scores
+            .into_iter()
+            .take(MAX_CACHE_SIZE * 3 / 4) // 保留75%的空间
+            .map(|(query, _)| query)
+            .collect();
+        
+        self.search_cache.retain(|query, _| keep_queries.contains(query));
+    }
+}
+
+// 为ArxivManager实现Drop trait，在应用程序退出时自动保存会话
+impl Drop for ArxivManager {
+    fn drop(&mut self) {
+        // 自动保存会话状态
+        if let Err(e) = self.handle_save_session_internal() {
+            eprintln!("Failed to save session on exit: {}", e);
+        } else {
+            println!("Session saved successfully on exit");
+        }
     }
 }

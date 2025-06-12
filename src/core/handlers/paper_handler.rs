@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message, ArxivPaper, TabContent, Tab};
+use crate::core::{ArxivManager, ArxivPaper, TabContent, Tab};
+use crate::core::messages::Message;
 
 pub trait PaperHandler {
     fn handle_paper_save(&mut self, paper: ArxivPaper) -> Task<Message>;
@@ -84,7 +85,7 @@ impl PaperHandler for ArxivManager {
             self.active_tab = existing_tab_index;
         } else {
             // 创建新的论文详情标签页
-            let title = format!("论文: {}", paper.title);
+            let title = ArxivManager::generate_paper_tab_title(&paper);
             let new_tab = Tab::new(self.next_tab_id, title, TabContent::PaperView(paper_index));
             self.tabs.push(new_tab);
             self.active_tab = self.tabs.len() - 1;

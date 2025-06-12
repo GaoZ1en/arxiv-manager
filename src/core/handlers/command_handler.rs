@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message, Command, TabContent};
+use crate::core::{ArxivManager, TabContent};
+use crate::core::messages::{Message, Command};
 
 pub trait CommandHandler {
     fn handle_command_palette_toggled(&mut self) -> Task<Message>;

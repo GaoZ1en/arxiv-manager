@@ -558,3 +558,46 @@ pub fn checkbox_dynamic_style(theme: &ThemeVariant) -> impl Fn(&iced::Theme, che
         text_color: Some(colors.text_primary),
     }
 }
+
+// 现代化滚动条样式 - 极细透明，只在需要时显示
+pub fn scrollable_style_dynamic(theme: &ThemeVariant) -> impl Fn(&iced::Theme, iced::widget::scrollable::Status) -> iced::widget::scrollable::Style {
+    let colors = get_theme_colors(theme);
+    move |_theme, status| {
+        use iced::widget::scrollable;
+        
+        // 根据状态决定滚动条可见性和透明度
+        let (scroller_color, rail_background) = match status {
+            scrollable::Status::Hovered { .. } => {
+                // 悬停时显示半透明滚动条
+                (Color { a: 0.3, ..colors.text_muted }, None)
+            }
+            scrollable::Status::Active { .. } => {
+                // 滚动时显示更明显的滚动条
+                (Color { a: 0.4, ..colors.text_secondary }, None)
+            }
+            scrollable::Status::Dragged { .. } => {
+                // 拖拽时显示最明显的滚动条
+                (Color { a: 0.6, ..colors.text_primary }, None)
+            }
+        };
+        
+        let rail = scrollable::Rail {
+            background: rail_background,
+            border: Border::default(),
+            scroller: scrollable::Scroller {
+                color: scroller_color,
+                border: Border {
+                    radius: 1.0.into(), // 极小的圆角
+                    ..Default::default()
+                },
+            },
+        };
+
+        scrollable::Style {
+            container: container::Style::default(),
+            vertical_rail: rail,
+            horizontal_rail: rail,
+            gap: None,
+        }
+    }
+}

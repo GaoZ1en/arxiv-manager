@@ -41,7 +41,7 @@ pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
     use iced::{Length, alignment};
     
     let reset_button_elem = button(
-        text("重置所有快捷键")
+        text("Reset All Shortcuts")
             .color(theme_colors.text_primary)
             .size(base_font_size)
             .font(current_font)
@@ -57,7 +57,7 @@ pub fn create_shortcuts_section(app: &ArxivManager) -> Element<'_, Message> {
     shortcut_items.push(reset_container.into());
 
     create_settings_section_with_colors(
-        "⌨️ Keyboard Shortcuts", 
+        "Keyboard Shortcuts", 
         theme_colors.button_primary, 
         shortcut_items, 
         app
@@ -72,7 +72,7 @@ fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Eleme
     let input_valid = crate::core::models::ShortcutKey::is_valid_shortcut(&app.shortcut_input);
     
     row![
-        text_input("例: Ctrl+K, Shift+F1, Alt+Tab", &app.shortcut_input)
+        text_input("Example: Ctrl+K, Shift+F1, Alt+Tab", &app.shortcut_input)
             .on_input(Message::ShortcutInputChanged)
             .on_submit(if input_valid {
                 Message::ShortcutChanged {
@@ -86,7 +86,7 @@ fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Eleme
             .size(base_font_size)
             .font(current_font),
         if input_valid {
-            button(text("确认").size(base_font_size * 0.86).font(current_font))
+            button(text("Confirm").size(base_font_size * 0.86).font(current_font))
                 .on_press(Message::ShortcutChanged {
                     action: action.to_string(),
                     shortcut: app.shortcut_input.clone(),
@@ -94,11 +94,11 @@ fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Eleme
                 .style(button_primary_style_dynamic(&app.settings.theme))
                 .padding([4.0 * scale, 8.0 * scale])
         } else {
-            button(text("确认").size(base_font_size * 0.86).font(current_font))
+            button(text("Confirm").size(base_font_size * 0.86).font(current_font))
                 .style(disabled_button_dynamic_style(&app.theme_colors()))
                 .padding([4.0 * scale, 8.0 * scale])
         },
-        button(text("取消").size(base_font_size * 0.86).font(current_font))
+        button(text("Cancel").size(base_font_size * 0.86).font(current_font))
             .on_press(Message::ShortcutEditCancelled)
             .style(button_secondary_style_dynamic(&app.settings.theme))
             .padding([4.0 * scale, 8.0 * scale])
@@ -120,7 +120,7 @@ fn create_shortcut_disabled_row<'a>(shortcut_display: &'a str, app: &'a ArxivMan
             .color(theme_colors.text_muted)
             .size(base_font_size)
             .font(current_font),
-        button(text("编辑").size(base_font_size * 0.86).font(current_font))
+        button(text("Edit").size(base_font_size * 0.86).font(current_font))
             .style(disabled_button_dynamic_style(&theme_colors))
             .padding([4.0 * scale, 8.0 * scale])
     ]
@@ -141,7 +141,7 @@ fn create_shortcut_normal_row<'a>(action: &'a str, shortcut_display: &'a str, ap
             .color(theme_colors.text_primary)
             .size(base_font_size)
             .font(current_font),
-        button(text("编辑").size(base_font_size * 0.86).font(current_font))
+        button(text("Edit").size(base_font_size * 0.86).font(current_font))
             .on_press(Message::ShortcutEditStarted(action.to_string()))
             .style(button_secondary_style_dynamic(&app.settings.theme))
             .padding([4.0 * scale, 8.0 * scale])

@@ -39,10 +39,10 @@ pub struct UiState {
 impl UiState {
     pub fn new() -> Self {
         let tabs = vec![
-            Tab { id: 0, title: "Search".to_string(), content: TabContent::Search, closable: false },
-            Tab { id: 1, title: "Library".to_string(), content: TabContent::Library, closable: false },
-            Tab { id: 2, title: "Downloads".to_string(), content: TabContent::Downloads, closable: false },
-            Tab { id: 3, title: "Settings".to_string(), content: TabContent::Settings, closable: false },
+            Tab::new(0, "Search".to_string(), TabContent::Search),
+            Tab::new(1, "Library".to_string(), TabContent::Library),
+            Tab::new(2, "Downloads".to_string(), TabContent::Downloads),
+            Tab::new(3, "Settings".to_string(), TabContent::Settings),
         ];
         
         Self {

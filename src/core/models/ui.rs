@@ -1,7 +1,8 @@
 // UI相关的数据模型
 
-// UI相关的数据模型
+use serde::{Deserialize, Serialize};
 
+// UI相关的数据模型
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PaneType {
@@ -19,6 +20,28 @@ pub struct Pane {
     pub title: String,
 }
 
+// 标签页分组
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TabGroup {
+    Default,
+    Research,    // 研究相关
+    Library,     // 图书馆相关
+    Downloads,   // 下载相关
+    Custom(String), // 自定义分组
+}
+
+impl TabGroup {
+    pub fn display_name(&self) -> &str {
+        match self {
+            TabGroup::Default => "默认",
+            TabGroup::Research => "研究",
+            TabGroup::Library => "图书馆",
+            TabGroup::Downloads => "下载",
+            TabGroup::Custom(name) => name,
+        }
+    }
+}
+
 // 标签页相关结构
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tab {
@@ -26,9 +49,11 @@ pub struct Tab {
     pub title: String,
     pub content: TabContent,
     pub closable: bool,
+    pub pinned: bool,        // 是否固定
+    pub group: TabGroup,     // 所属分组
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TabContent {
     Search,
     Library,
@@ -39,13 +64,41 @@ pub enum TabContent {
 
 impl Tab {
     pub fn new(id: usize, title: String, content: TabContent) -> Self {
-        let closable = !matches!(content, TabContent::Search | TabContent::Library | TabContent::Downloads | TabContent::Settings);
+        let closable = true; // 所有标签页默认都可以关闭，用户可以通过固定来保护重要标签页
+        let pinned = false; // 默认不固定任何标签页
+        let group = match &content {
+            TabContent::Search => TabGroup::Default,
+            TabContent::Library => TabGroup::Library,
+            TabContent::Downloads => TabGroup::Downloads,
+            TabContent::Settings => TabGroup::Default,
+            TabContent::PaperView(_) => TabGroup::Research,
+        };
+        
         Self {
             id,
             title,
             content,
             closable,
+            pinned,
+            group,
         }
+    }
+    
+    pub fn new_with_group(id: usize, title: String, content: TabContent, group: TabGroup) -> Self {
+        let mut tab = Self::new(id, title, content);
+        tab.group = group;
+        tab
+    }
+    
+    pub fn pin(&mut self) {
+        self.pinned = true;
+        self.closable = false;
+    }
+    
+    pub fn unpin(&mut self) {
+        self.pinned = false;
+        // 取消固定后，除了被固定的标签页，其他都可以关闭
+        self.closable = true;
     }
 }
 
@@ -243,10 +296,6 @@ impl Theme {
 pub enum Language {
     English,
     Chinese,
-    Japanese,
-    German,
-    French,
-    Spanish,
 }
 
 impl std::fmt::Display for Language {
@@ -260,10 +309,6 @@ impl Language {
         match self {
             Language::English => "English",
             Language::Chinese => "中文",
-            Language::Japanese => "日本語",
-            Language::German => "Deutsch",
-            Language::French => "Français",
-            Language::Spanish => "Español",
         }
     }
 
@@ -271,10 +316,6 @@ impl Language {
         vec![
             Language::English,
             Language::Chinese,
-            Language::Japanese,
-            Language::German,
-            Language::French,
-            Language::Spanish,
         ]
     }
 }

@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message};
+use crate::core::ArxivManager;
+use crate::core::messages::Message;
 use crate::core::models::{Theme, Language, SearchField, SortBy, SortOrder};
 
 pub trait SettingsHandler {

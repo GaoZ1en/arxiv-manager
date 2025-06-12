@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message, ShortcutKey};
+use crate::core::{ArxivManager, ShortcutKey};
+use crate::core::messages::Message;
 
 pub trait ShortcutHandler {
     fn handle_shortcut_edit_started(&mut self, action: String) -> Task<Message>;

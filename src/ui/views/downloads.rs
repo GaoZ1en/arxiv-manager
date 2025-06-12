@@ -6,7 +6,7 @@ use iced::{Element, Length};
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
 use crate::ui::components::PaperCard;
-use crate::ui::style::chat_container_dynamic_style;
+use crate::ui::style::{chat_container_dynamic_style, scrollable_style_dynamic};
 
 pub struct DownloadsView;
 
@@ -19,7 +19,7 @@ impl DownloadsView {
         
         let content = if app.downloads.is_empty() {
             column![
-                text("📥 Downloads")
+                text("Downloads")
                     .color(theme_colors.text_primary)
                     .size(base_font_size * 1.43)
                     .font(current_font),
@@ -39,7 +39,7 @@ impl DownloadsView {
             let downloads_count = app.downloads.len();
             column![
                 container(
-                    text(format!("📥 Downloads ({} active)", downloads_count))
+                    text(format!("Downloads ({} active)", downloads_count))
                         .color(theme_colors.text_primary)
                         .size(base_font_size * 1.29)
                         .font(current_font)
@@ -59,6 +59,7 @@ impl DownloadsView {
                             }).collect::<Vec<Element<Message>>>()
                         ).spacing(12)
                     )
+                    .style(scrollable_style_dynamic(&app.settings.theme))
                     .height(Length::Fill)
                 )
                 .padding(16)

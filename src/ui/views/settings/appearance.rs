@@ -10,14 +10,14 @@ use crate::ui::theme::{get_theme_preview};
 use crate::ui::style::{pick_list_dynamic_style, text_input_dynamic_style};
 use super::components::settings_section::create_settings_section_with_colors;
 use super::components::setting_row::create_setting_row;
-use crate::ui::components::{emoji_text, emoji_text_colored};
+
 
 /// 创建外观设置区域
 pub fn create_appearance_section(app: &ArxivManager) -> Element<'_, Message> {
     let theme_colors = app.theme_colors();
     
     create_settings_section_with_colors(
-        "🎨 Appearance",
+        "Appearance",
         theme_colors.info_color,
         vec![
             create_theme_selector_row(app),
@@ -151,7 +151,7 @@ fn create_theme_preview_row<'a>(theme: &Theme, app: &'a ArxivManager) -> Element
             
             // 主题类型指示器
             container(
-                text(if theme.is_dark() { "🌙 Dark" } else { "☀️ Light" })
+                text(if theme.is_dark() { "Dark" } else { "Light" })
                     .size(base_font_size * 0.86)
                     .font(current_font)
                     .color(text_color) // 使用动态文本颜色
@@ -210,7 +210,9 @@ fn create_font_settings_row(app: &ArxivManager) -> Element<'_, Message> {
     let scale = app.current_scale();
     
     let font_families = vec![
-        "系统默认".to_string(),
+        "Nerd Font".to_string(),
+        "System Default".to_string(),
+        // 西文字体
         "Arial".to_string(),
         "Helvetica".to_string(),
         "Times New Roman".to_string(),
@@ -219,32 +221,10 @@ fn create_font_settings_row(app: &ArxivManager) -> Element<'_, Message> {
         "Verdana".to_string(),
         "Tahoma".to_string(),
         "Trebuchet MS".to_string(),
-        "Comic Sans MS".to_string(),
-        "Impact".to_string(),
-        "Lucida Console".to_string(),
-        "Palatino".to_string(),
-        "Garamond".to_string(),
-        "Book Antiqua".to_string(),
-        "Century Gothic".to_string(),
-        "Franklin Gothic Medium".to_string(),
-        "Gill Sans".to_string(),
-        "Lucida Sans".to_string(),
-        "MS Sans Serif".to_string(),
-        "MS Serif".to_string(),
         "Segoe UI".to_string(),
         "Calibri".to_string(),
         "Cambria".to_string(),
         "Consolas".to_string(),
-        "微软雅黑".to_string(),
-        "宋体".to_string(),
-        "黑体".to_string(),
-        "楷体".to_string(),
-        "仿宋".to_string(),
-        // Emoji字体
-        "Noto Color Emoji".to_string(),
-        "Apple Color Emoji".to_string(),
-        "Segoe UI Emoji".to_string(),
-        "EmojiOne Color".to_string(),
     ];
     
     create_setting_row(

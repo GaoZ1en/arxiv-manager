@@ -28,7 +28,7 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            theme: Theme::ModernDark,
+            theme: Theme::CatppuccinMocha,
             download_directory: "downloads".to_string(),
             auto_download: false,
             max_concurrent_downloads: 3,
@@ -43,9 +43,9 @@ impl Default for AppSettings {
             language: Language::English,
             shortcuts: KeyboardShortcuts::default(),
             // 字体和缩放默认值
-            font_family: "系统默认".to_string(),
-            font_size: 14.0,
-            ui_scale: 1.0,
+            font_family: "Nerd Font".to_string(),
+            font_size: 9.0,
+            ui_scale: 0.75,
         }
     }
 }
@@ -91,19 +91,19 @@ impl Default for KeyboardShortcuts {
 impl KeyboardShortcuts {
     pub fn get_all_actions(&self) -> Vec<(&'static str, &str, &ShortcutKey)> {
         vec![
-            ("toggle_command_palette", "切换命令面板", &self.toggle_command_palette),
-            ("focus_search", "聚焦搜索框", &self.focus_search),
-            ("quick_save_paper", "快速保存论文", &self.quick_save_paper),
-            ("quick_download_paper", "快速下载论文", &self.quick_download_paper),
-            ("toggle_sidebar", "切换侧边栏", &self.toggle_sidebar),
-            ("next_tab", "下一个标签页", &self.next_tab),
-            ("previous_tab", "上一个标签页", &self.previous_tab),
-            ("close_tab", "关闭标签页", &self.close_tab),
-            ("new_tab", "新建标签页", &self.new_tab),
-            ("go_to_search", "转到搜索", &self.go_to_search),
-            ("go_to_library", "转到论文库", &self.go_to_library),
-            ("go_to_downloads", "转到下载", &self.go_to_downloads),
-            ("go_to_settings", "转到设置", &self.go_to_settings),
+            ("toggle_command_palette", "Toggle command palette", &self.toggle_command_palette),
+            ("focus_search", "Focus search input", &self.focus_search),
+            ("quick_save_paper", "Quick save paper", &self.quick_save_paper),
+            ("quick_download_paper", "Quick download paper", &self.quick_download_paper),
+            ("toggle_sidebar", "Toggle sidebar", &self.toggle_sidebar),
+            ("next_tab", "Next tab", &self.next_tab),
+            ("previous_tab", "Previous tab", &self.previous_tab),
+            ("close_tab", "Close tab", &self.close_tab),
+            ("new_tab", "New tab", &self.new_tab),
+            ("go_to_search", "Go to search", &self.go_to_search),
+            ("go_to_library", "Go to library", &self.go_to_library),
+            ("go_to_downloads", "Go to downloads", &self.go_to_downloads),
+            ("go_to_settings", "Go to settings", &self.go_to_settings),
         ]
     }
 }

@@ -29,7 +29,9 @@ pub fn build_search_url(config: &SearchConfig) -> Result<String, String> {
     // 添加作者过滤
     for author in &config.authors {
         if !author.trim().is_empty() {
-            query_parts.push(format!("au:\"{}\"", author.trim()));
+            // 对一些常见的作者名做特殊处理，提高搜索准确性
+            let author_query = normalize_author_name(author.trim());
+            query_parts.push(format!("au:\"{}\"", author_query));
         }
     }
     
@@ -105,4 +107,63 @@ pub fn build_simple_query_url(query: &str, max_results: u32) -> String {
         "https://export.arxiv.org/api/query?search_query=all:{}&start=0&max_results={}&sortBy=submittedDate&sortOrder=descending",
         encoded_query, max_results
     )
+}
+
+/// 标准化作者姓名，处理常见的拼写和格式变体
+fn normalize_author_name(author: &str) -> String {
+    let author_lower = author.to_lowercase();
+    
+    // 处理一些常见的理论物理学家姓名变体
+    match author_lower.as_str() {
+        "maldacena" | "juan maldacena" | "j. maldacena" | "juan m. maldacena" => {
+            "Maldacena, Juan".to_string()
+        },
+        "witten" | "edward witten" | "e. witten" | "edward m. witten" => {
+            "Witten, Edward".to_string()
+        },
+        "hawking" | "stephen hawking" | "s. hawking" | "stephen w. hawking" => {
+            "Hawking, Stephen W.".to_string()
+        },
+        "penrose" | "roger penrose" | "r. penrose" => {
+            "Penrose, Roger".to_string()
+        },
+        "arkani-hamed" | "nima arkani-hamed" | "n. arkani-hamed" => {
+            "Arkani-Hamed, Nima".to_string()
+        },
+        "susskind" | "leonard susskind" | "l. susskind" => {
+            "Susskind, Leonard".to_string()
+        },
+        "polchinski" | "joseph polchinski" | "j. polchinski" => {
+            "Polchinski, Joseph".to_string()
+        },
+        "seiberg" | "nathan seiberg" | "n. seiberg" => {
+            "Seiberg, Nathan".to_string()
+        },
+        "vafa" | "cumrun vafa" | "c. vafa" => {
+            "Vafa, Cumrun".to_string()
+        },
+        "green" | "michael green" | "m. green" | "michael b. green" => {
+            "Green, Michael B.".to_string()
+        },
+        _ => {
+            // 对于其他姓名，尝试标准化格式
+            if author.contains(',') {
+                // 已经是 "姓, 名" 格式
+                author.to_string()
+            } else if author.contains(' ') {
+                // 转换 "名 姓" 为 "姓, 名" 格式
+                let parts: Vec<&str> = author.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let last = parts.last().unwrap();
+                    let first_parts: Vec<&str> = parts[..parts.len()-1].iter().cloned().collect();
+                    format!("{}, {}", last, first_parts.join(" "))
+                } else {
+                    author.to_string()
+                }
+            } else {
+                // 单个词，可能只是姓
+                author.to_string()
+            }
+        }
+    }
 }

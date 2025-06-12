@@ -3,7 +3,8 @@
 
 use iced::Task;
 
-use crate::core::{ArxivManager, Message, ArxivPaper, DownloadItem, DownloadStatus};
+use crate::core::{ArxivManager, ArxivPaper, DownloadItem, DownloadStatus};
+use crate::core::messages::Message;
 
 pub trait DownloadHandler {
     fn handle_download_paper(&mut self, paper: ArxivPaper) -> Task<Message>;

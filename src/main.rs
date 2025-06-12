@@ -17,6 +17,10 @@ fn main() -> iced::Result {
     iced::application("arXiv Paper Manager", ArxivManager::update, ArxivManager::view)
         .subscription(ArxivManager::subscription)
         .theme(ArxivManager::theme)
+        .font(include_bytes!("../fonts/JetBrainsMonoNerdFont-Regular.ttf").as_slice())
+        .font(include_bytes!("../fonts/JetBrainsMonoNerdFont-Bold.ttf").as_slice())
+        .font(include_bytes!("../fonts/JetBrainsMonoNerdFont-Italic.ttf").as_slice())
+        .font(include_bytes!("../fonts/JetBrainsMonoNerdFont-BoldItalic.ttf").as_slice())
         .window_size((1400.0, 900.0))
         .run_with(|| {
             let (app, task) = ArxivManager::new();

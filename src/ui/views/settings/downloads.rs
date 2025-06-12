@@ -16,7 +16,7 @@ pub fn create_downloads_section(app: &ArxivManager) -> Element<'_, Message> {
     let base_font_size = app.current_font_size();
     
     create_settings_section_with_colors(
-        "📥 Downloads",
+        "Downloads",
         theme_colors.success_color,
         vec![
             create_setting_row(

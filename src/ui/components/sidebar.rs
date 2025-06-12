@@ -1,14 +1,14 @@
 // 现代化侧边栏组件 - IRC客户端风格
 
-use iced::widget::{button, column, text, scrollable, container, row, horizontal_space, vertical_space};
+use iced::widget::{button, column, scrollable, container, row, horizontal_space, vertical_space, text};
 use iced::{Element, Length, Padding, Alignment};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::models::TabContent;
 use crate::core::messages::Message;
-use crate::ui::style::{sidebar_item_style_dynamic, sidebar_container_dynamic_style};
+use crate::ui::style::{sidebar_item_style_dynamic, sidebar_container_dynamic_style, scrollable_style_dynamic};
 use crate::ui::theme::ThemeColors;
-use crate::ui::components::{emoji_text, emoji_text_colored};
+
 
 pub struct Sidebar;
 
@@ -18,29 +18,11 @@ impl Sidebar {
         let current_font = app.current_font();
         let base_font_size = app.current_font_size();
         
-        // 顶部用户区域
+        // 顶部用户区域 - 已删除所有标题文本
         let user_section = container(
-            column![
-                row![
-                    emoji_text_colored(app, "📖", base_font_size * 1.4, theme_colors.text_primary),
-                    text("ArXiv Manager")
-                            .color(theme_colors.text_primary)
-                            .size(base_font_size * 1.14)
-                            .font(iced::Font {
-                                weight: iced::font::Weight::Bold,
-                                ..current_font
-                            }),
-                ]
-                .spacing(12.0 * app.current_scale())
-                .align_y(Alignment::Center),
-                text("Academic Paper Manager")
-                    .color(theme_colors.text_muted)
-                    .size(base_font_size * 0.86)
-                    .font(current_font),
-            ]
-            .spacing(4.0 * app.current_scale())
+            column![]
         )
-        .padding(Padding::new(16.0 * app.current_scale()).bottom(12.0 * app.current_scale()));
+        .padding(Padding::new(8.0 * app.current_scale()).bottom(8.0 * app.current_scale()));
 
         // 导航区域
         let navigation_section = container(
@@ -55,13 +37,13 @@ impl Sidebar {
                                 ..current_font
                             })
                 )
-                .padding(Padding::new(16.0 * app.current_scale()).bottom(8.0 * app.current_scale()).top(0.0)),
+                .padding(Padding::new(8.0 * app.current_scale()).bottom(4.0 * app.current_scale()).top(0.0)),
                 
-                // 导航按钮
-                sidebar_nav_item("🔍", "Search", 0, app.active_tab == 0, &theme_colors, &app.settings.theme, app),
-                sidebar_nav_item("📚", "Library", 1, app.active_tab == 1, &theme_colors, &app.settings.theme, app),
-                sidebar_nav_item("📥", "Downloads", 2, app.active_tab == 2, &theme_colors, &app.settings.theme, app),
-                sidebar_nav_item("⚙️", "Settings", 3, app.active_tab == 3, &theme_colors, &app.settings.theme, app),
+                // 导航按钮 - Nerd Font图标
+                sidebar_nav_item(" SEARCH", TabContent::Search, is_current_content(&app, &TabContent::Search), &theme_colors, &app.settings.theme, app),
+                sidebar_nav_item(" LIBRARY", TabContent::Library, is_current_content(&app, &TabContent::Library), &theme_colors, &app.settings.theme, app),
+                sidebar_nav_item(" DOWNLOADS", TabContent::Downloads, is_current_content(&app, &TabContent::Downloads), &theme_colors, &app.settings.theme, app),
+                sidebar_nav_item(" SETTINGS", TabContent::Settings, is_current_content(&app, &TabContent::Settings), &theme_colors, &app.settings.theme, app),
             ]
             .spacing(2.0 * app.current_scale())
         );
@@ -80,7 +62,7 @@ impl Sidebar {
                                 ..current_font
                             })
                     )
-                    .padding(Padding::new(16.0 * app.current_scale()).bottom(8.0 * app.current_scale()).top(16.0 * app.current_scale())),
+                    .padding(Padding::new(8.0 * app.current_scale()).bottom(4.0 * app.current_scale()).top(8.0 * app.current_scale())),
                     
                     // 论文列表
                     scrollable(
@@ -90,6 +72,7 @@ impl Sidebar {
                             }).collect::<Vec<Element<Message>>>()
                         ).spacing(2)
                     )
+                    .style(scrollable_style_dynamic(&app.settings.theme))
                     .height(Length::Fill)
                 ]
             )
@@ -105,7 +88,7 @@ impl Sidebar {
                                 ..current_font
                             })
                     )
-                    .padding(Padding::new(16.0 * app.current_scale()).bottom(8.0 * app.current_scale()).top(16.0 * app.current_scale())),
+                    .padding(Padding::new(8.0 * app.current_scale()).bottom(4.0 * app.current_scale()).top(8.0 * app.current_scale())),
                     
                     container(
                         text("No saved papers yet")
@@ -113,7 +96,7 @@ impl Sidebar {
                             .size(base_font_size * 0.93)
                             .font(current_font)
                     )
-                    .padding(Padding::new(16.0 * app.current_scale()))
+                    .padding(Padding::new(8.0 * app.current_scale()))
                 ]
             )
         };
@@ -123,21 +106,25 @@ impl Sidebar {
             column![
                 container(
                     row![
-                        text("●").color(theme_colors.success_color).size(base_font_size * 0.86).font(current_font),
-                        text("Ready")
-                            .color(theme_colors.text_secondary)
-                            .size(base_font_size * 0.86)
-                            .font(current_font),
+                        text("READY").color(theme_colors.success_color).size(base_font_size * 0.86).font(current_font),
                         horizontal_space(),
-                        button(text("⚙").color(theme_colors.text_muted).font(current_font))
-                            .on_press(Message::TabClicked(3))
+                        button(text("Settings").color(theme_colors.text_muted).size(base_font_size * 0.86).font(current_font))
+                            .on_press(if app.tabs.iter().any(|tab| tab.content == TabContent::Settings) {
+                                if let Some(index) = app.tabs.iter().position(|tab| tab.content == TabContent::Settings) {
+                                    Message::TabClicked(index)
+                                } else {
+                                    Message::NewTab(TabContent::Settings)
+                                }
+                            } else {
+                                Message::NewTab(TabContent::Settings)
+                            })
                             .style(sidebar_item_style_dynamic(&app.settings.theme))
-                            .padding(4.0 * app.current_scale()),
+                            .padding(8.0 * app.current_scale()),
                     ]
                     .spacing(8.0 * app.current_scale())
                     .align_y(Alignment::Center)
                 )
-                .padding(Padding::new(16.0 * app.current_scale()).top(8.0 * app.current_scale()))
+                .padding(Padding::new(8.0 * app.current_scale()).top(4.0 * app.current_scale()))
             ]
         );
 
@@ -150,59 +137,65 @@ impl Sidebar {
                 status_section,
             ]
         )
-        .width((280.0 * app.current_scale()) as u16)
+        .width((140.0 * app.current_scale()) as u16)
         .height(Length::Fill)
         .style(sidebar_container_dynamic_style(&app.settings.theme))
         .into()
     }
 }
 
-// 导航项目组件
-fn sidebar_nav_item<'a>(icon: &'a str, label: &'a str, tab_index: usize, is_active: bool, theme_colors: &ThemeColors, theme: &crate::core::models::Theme, app: &'a ArxivManager) -> Element<'a, Message> {
+// 检查当前内容是否激活的辅助函数
+fn is_current_content(app: &ArxivManager, content: &TabContent) -> bool {
+    if let Some(current_tab) = app.tabs.get(app.active_tab) {
+        &current_tab.content == content
+    } else {
+        false
+    }
+}
+
+// 导航项目组件 - 只有文本，无图标
+fn sidebar_nav_item<'a>(label: &'a str, content: TabContent, is_active: bool, theme_colors: &ThemeColors, theme: &crate::core::models::Theme, app: &'a ArxivManager) -> Element<'a, Message> {
     let text_color = if is_active { theme_colors.text_primary } else { theme_colors.text_secondary };
     let current_font = app.current_font();
     let base_font_size = app.current_font_size();
     let scale = app.current_scale();
     
+    // 找到对应的标签页索引，如果不存在则创建新标签页
+    let message = if let Some(tab_index) = app.tabs.iter().position(|tab| tab.content == content) {
+        Message::TabClicked(tab_index)
+    } else {
+        Message::NewTab(content)
+    };
+    
     if is_active {
         let accent_border = theme_colors.accent_border;
         let theme_clone = theme.clone();
         button(
-            row![
-                emoji_text_colored(app, icon, base_font_size * 1.14, text_color),
-                text(label)
-                    .color(text_color)
-                    .size(base_font_size)
-                    .font(current_font),
-            ]
-            .spacing(12.0 * scale)
-            .align_y(Alignment::Center)
+            text(label)
+                .color(text_color)
+                .size(base_font_size)
+                .font(current_font)
         )
-        .on_press(Message::TabClicked(tab_index))
+        .on_press(message)
         .width(Length::Fill)
         .style(move |_: &iced::Theme, status| {
             let mut base_style = sidebar_item_style_dynamic(&theme_clone)(&iced::Theme::default(), status);
             base_style.background = Some(iced::Background::Color(accent_border));
             base_style
         })
-        .padding(Padding::new(12.0 * scale).left(16.0 * scale).right(16.0 * scale))
+        .padding(Padding::new(8.0 * scale).left(8.0 * scale).right(8.0 * scale))
         .into()
     } else {
         button(
-            row![
-                emoji_text_colored(app, icon, base_font_size * 1.14, text_color),
-                text(label)
-                    .color(text_color)
-                    .size(base_font_size)
-                    .font(current_font),
-            ]
-            .spacing(12.0 * scale)
-            .align_y(Alignment::Center)
+            text(label)
+                .color(text_color)
+                .size(base_font_size)
+                .font(current_font)
         )
-        .on_press(Message::TabClicked(tab_index))
+        .on_press(message)
         .width(Length::Fill)
         .style(sidebar_item_style_dynamic(theme))
-        .padding(Padding::new(12.0 * scale).left(16.0 * scale).right(16.0 * scale))
+        .padding(Padding::new(8.0 * scale).left(8.0 * scale).right(8.0 * scale))
         .into()
     }
 }
@@ -221,7 +214,7 @@ fn paper_item<'a>(title: &'a str, index: usize, theme_colors: &ThemeColors, them
 
     button(
         row![
-            text("📄").color(theme_colors.text_muted).size(base_font_size).font(current_font),
+            text("DOC").color(theme_colors.text_muted).size(base_font_size).font(current_font),
             text(truncated_title)
                 .color(theme_colors.text_secondary)
                 .size(base_font_size * 0.93)
@@ -233,6 +226,6 @@ fn paper_item<'a>(title: &'a str, index: usize, theme_colors: &ThemeColors, them
     .on_press(Message::NewTab(TabContent::PaperView(index)))
     .width(Length::Fill)
     .style(sidebar_item_style_dynamic(theme))
-    .padding(Padding::new(8.0 * scale).left(16.0 * scale).right(16.0 * scale))
+    .padding(Padding::new(8.0 * scale).left(8.0 * scale).right(8.0 * scale))
     .into()
 }

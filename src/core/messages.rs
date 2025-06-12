@@ -95,6 +95,19 @@ pub enum Message {
     NavigateToNextTab,
     NavigateToPreviousTab,
     CloseActiveTab, // 关闭当前活动标签页
+    // 右键菜单操作
+    TabRightClicked { tab_index: usize, position: iced::Point },
+    HideContextMenu,
+    TabPin(usize),
+    TabUnpin(usize),
+    TabMoveToGroup(usize, crate::core::models::ui::TabGroup),
+    TabDuplicate(usize),
+    CloseTabsToRight(usize),
+    CloseOtherTabs(usize),
+    CloseTabsInGroup(crate::core::models::ui::TabGroup),
+    // 会话管理
+    SaveSession,
+    LoadSession,
 }
 
 #[derive(Debug, Clone)]

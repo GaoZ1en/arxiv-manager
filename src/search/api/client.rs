@@ -38,24 +38,81 @@ pub async fn search_arxiv_papers_advanced(config: SearchConfig) -> Result<Vec<Ar
 
 /// 执行HTTP请求并解析结果的内部函数
 async fn execute_search_request(url: &str) -> Result<Vec<ArxivPaper>, String> {
-    // 发送HTTP请求
-    let client = reqwest::Client::new();
-    let response = client
-        .get(url)
-        .header("User-Agent", "ArxivManager/1.0")
-        .send()
-        .await
-        .map_err(|e| format!("网络请求失败: {}", e))?;
+    // 创建具有超时和重试的HTTP客户端
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30)) // 30秒超时
+        .user_agent("ArxivManager/1.0 (https://github.com/user/arxiv-manager)")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    if !response.status().is_success() {
-        return Err(format!("API请求失败，状态码: {}", response.status()));
+    // 执行请求，最多重试3次
+    let mut last_error = None;
+    
+    for attempt in 0..3 {
+        if attempt > 0 {
+            // 指数退避：等待 2^attempt 秒
+            let delay = std::time::Duration::from_secs(2_u64.pow(attempt));
+            tokio::time::sleep(delay).await;
+        }
+        
+        match client
+            .get(url)
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if !response.status().is_success() {
+                    let status = response.status();
+                    let error_msg = match status.as_u16() {
+                        429 => "Rate limit exceeded. Please try again later.".to_string(),
+                        500..=599 => "ArXiv server error. Please try again later.".to_string(),
+                        _ => format!("API request failed with status: {}", status),
+                    };
+                    
+                    if attempt == 2 { // 最后一次尝试
+                        return Err(error_msg);
+                    } else {
+                        last_error = Some(error_msg);
+                        continue;
+                    }
+                }
+
+                match response.text().await {
+                    Ok(xml_content) => {
+                        if xml_content.trim().is_empty() {
+                            return Err("Received empty response from ArXiv API".to_string());
+                        }
+                        
+                        // 解析XML响应
+                        return parse_arxiv_xml(&xml_content);
+                    }
+                    Err(e) => {
+                        let error_msg = format!("Failed to read response content: {}", e);
+                        if attempt == 2 {
+                            return Err(error_msg);
+                        } else {
+                            last_error = Some(error_msg);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                let error_msg = if e.is_timeout() {
+                    "Request timed out. Please check your internet connection.".to_string()
+                } else if e.is_connect() {
+                    "Connection failed. Please check your internet connection.".to_string()
+                } else {
+                    format!("Network request failed: {}", e)
+                };
+                
+                if attempt == 2 {
+                    return Err(error_msg);
+                } else {
+                    last_error = Some(error_msg);
+                }
+            }
+        }
     }
-
-    let xml_content = response
-        .text()
-        .await
-        .map_err(|e| format!("读取响应内容失败: {}", e))?;
-
-    // 解析XML响应
-    parse_arxiv_xml(&xml_content)
+    
+    Err(last_error.unwrap_or_else(|| "Unknown network error".to_string()))
 }

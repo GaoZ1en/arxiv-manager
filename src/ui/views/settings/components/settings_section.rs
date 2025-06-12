@@ -4,7 +4,7 @@ use iced::widget::{column, container, text, vertical_space};
 use iced::{Element, Background, Border, Color, Shadow};
 
 use crate::core::messages::Message;
-use crate::core::app_state::ArxivManager;
+
 use crate::ui::theme::{DARK_BG_SECONDARY, TEXT_PRIMARY};
 
 /// 创建设置区域
