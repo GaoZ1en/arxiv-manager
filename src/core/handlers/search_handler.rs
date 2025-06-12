@@ -333,18 +333,29 @@ impl SearchHandler for ArxivManager {
     fn handle_search_by_author(&mut self, author: String) -> Task<Message> {
         // 清空当前搜索条件
         self.search_config = SearchConfig::default();
-        self.search_query = String::new();
         
-        // 设置作者搜索
-        self.search_config.authors.push(author.trim().to_string());
+        // 设置作者搜索 - 使用查询字段来确保搜索能够执行
+        let author_query = format!("au:{}", author.trim());
+        self.search_query = author_query.clone();
+        self.search_config.query = author_query;
         self.search_config.search_in = SearchField::Authors;
         self.search_config.max_results = 50; // 作者搜索通常返回更多结果
         
         // 添加到搜索历史
         self.add_to_search_history(format!("author:{}", author.trim()));
         
-        // 执行搜索
-        self.handle_search_submitted()
+        // 设置搜索状态
+        self.is_searching = true;
+        self.last_search_time = Some(std::time::Instant::now());
+        
+        // 直接执行搜索，绕过空查询检查
+        let config = self.search_config.clone();
+        println!("🚀 Executing search with config: {:?}", config);
+        
+        Task::perform(
+            search_arxiv_papers_advanced(config),
+            Message::SearchCompleted
+        )
     }
 
     fn handle_load_more_results(&mut self) -> Task<Message> {

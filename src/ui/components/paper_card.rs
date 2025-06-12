@@ -11,7 +11,27 @@ use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dyna
 pub struct PaperCard;
 
 impl PaperCard {
+    /// 用于Search视图的论文卡片 - 包含Save和Download按钮
+    pub fn search_view<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
+        Self::create_card_base(app, paper, Self::create_search_buttons(app, paper))
+    }
+    
+    /// 用于Library视图的论文卡片 - 包含Remove、Download和View按钮
+    pub fn library_view<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
+        Self::create_card_base(app, paper, Self::create_library_buttons(app, paper))
+    }
+    
+    /// 兼容旧接口的方法（逐步废弃）
     pub fn view<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper, is_saved: bool) -> Element<'a, Message> {
+        if is_saved {
+            Self::library_view(app, paper)
+        } else {
+            Self::search_view(app, paper)
+        }
+    }
+    
+    /// 创建卡片的基础结构
+    fn create_card_base<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper, buttons: Element<'a, Message>) -> Element<'a, Message> {
         let theme_colors = app.theme_colors();
         let current_font = app.current_font();
         let base_font_size = app.current_font_size();
@@ -28,43 +48,7 @@ impl PaperCard {
             .size(base_font_size * 0.8)
             .font(current_font);
 
-        let authors = text(paper.authors.join(", "))
-            .color(theme_colors.text_muted)
-            .size(base_font_size * 0.86)
-            .font(current_font);
-
-        let buttons = if is_saved {
-            row![
-                button(text("Remove").color(Color::WHITE).size(base_font_size).font(current_font))
-                    .on_press(Message::RemovePaper(paper.id.clone()))
-                    .style(button_danger_style_dynamic(&app.settings.theme))
-                    .padding([8.0 * scale, 16.0 * scale]),
-                button(text("Download").color(Color::BLACK).size(base_font_size).font(current_font))
-                    .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_primary_style_dynamic(&app.settings.theme))
-                    .padding([8.0 * scale, 16.0 * scale]),
-                button(text("View").color(theme_colors.text_primary).size(base_font_size).font(current_font))
-                    .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
-                        Message::NewTab(TabContent::PaperView(index))
-                    } else {
-                        Message::NoOp
-                    })
-                    .style(button_secondary_style_dynamic(&app.settings.theme))
-                    .padding([8.0 * scale, 16.0 * scale]),
-            ]
-        } else {
-            row![
-                button(text("Save").color(Color::BLACK).size(base_font_size).font(current_font))
-                    .on_press(Message::SavePaper(paper.clone()))
-                    .style(button_primary_style_dynamic(&app.settings.theme))
-                    .padding([8.0 * scale, 16.0 * scale]),
-                button(text("Download").color(theme_colors.text_primary).size(base_font_size).font(current_font))
-                    .on_press(Message::DownloadPaper(paper.clone()))
-                    .style(button_secondary_style_dynamic(&app.settings.theme))
-                    .padding([8.0 * scale, 16.0 * scale]),
-            ]
-        }
-        .spacing(8.0 * scale);
+        let authors = Self::create_clickable_authors(app, &paper.authors);
 
         container(
             column![
@@ -88,6 +72,56 @@ impl PaperCard {
             text_color: Some(theme_colors.text_primary),
             shadow: Shadow::default(),
         })
+        .into()
+    }
+    
+    /// 创建Search视图的按钮 - Save和Download
+    fn create_search_buttons<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
+        let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
+        
+        row![
+            button(text("Save").color(Color::BLACK).size(base_font_size).font(current_font))
+                .on_press(Message::SavePaper(paper.clone()))
+                .style(button_primary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 16.0 * scale]),
+            button(text("Download").color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::DownloadPaper(paper.clone()))
+                .style(button_secondary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 16.0 * scale]),
+        ]
+        .spacing(8.0 * scale)
+        .into()
+    }
+    
+    /// 创建Library视图的按钮 - Remove、Download和View
+    fn create_library_buttons<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
+        let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
+        
+        row![
+            button(text("Remove").color(Color::WHITE).size(base_font_size).font(current_font))
+                .on_press(Message::RemovePaper(paper.id.clone()))
+                .style(button_danger_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 16.0 * scale]),
+            button(text("Download").color(Color::BLACK).size(base_font_size).font(current_font))
+                .on_press(Message::DownloadPaper(paper.clone()))
+                .style(button_primary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 16.0 * scale]),
+            button(text("View").color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
+                    Message::NewTab(TabContent::PaperView(index))
+                } else {
+                    Message::NoOp
+                })
+                .style(button_secondary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 16.0 * scale]),
+        ]
+        .spacing(8.0 * scale)
         .into()
     }
 
@@ -142,6 +176,120 @@ impl PaperCard {
                 text_color: Some(theme_colors.text_primary),
                 shadow: Shadow::default(),
             })
+            .into()
+    }
+
+    /// 创建可点击的作者列表
+    fn create_clickable_authors<'a>(app: &'a ArxivManager, authors: &'a [String]) -> Element<'a, Message> {
+        Self::create_clickable_authors_with_limit(app, authors, Some(2))
+    }
+
+    /// 创建可点击的作者列表（带限制）
+    fn create_clickable_authors_with_limit<'a>(
+        app: &'a ArxivManager, 
+        authors: &'a [String], 
+        limit: Option<usize>
+    ) -> Element<'a, Message> {
+        let theme_colors = app.theme_colors();
+        let current_font = app.current_font();
+        let base_font_size = app.current_font_size();
+        let scale = app.current_scale();
+
+        if authors.is_empty() {
+            return text("Unknown authors")
+                .color(theme_colors.text_muted)
+                .size(base_font_size * 0.86)
+                .font(current_font)
+                .into();
+        }
+
+        // 创建作者按钮的行
+        let mut author_row = row![].spacing(4.0 * scale);
+        
+        // 决定要显示的作者数量
+        let (display_authors, show_et_al) = match limit {
+            Some(max_authors) if authors.len() > max_authors => {
+                (&authors[..max_authors], true)
+            },
+            _ => (authors, false)
+        };
+        
+        for (i, author) in display_authors.iter().enumerate() {
+            // 添加逗号分隔符（除了第一个作者）
+            if i > 0 {
+                author_row = author_row.push(
+                    text(", ")
+                        .color(theme_colors.text_muted)
+                        .size(base_font_size * 0.86)
+                        .font(current_font)
+                );
+            }
+            
+            // 创建可点击的作者按钮
+            let author_button = button(
+                text(author)
+                    .color(theme_colors.accent_border)
+                    .size(base_font_size * 0.86)
+                    .font(current_font)
+            )
+            .on_press(Message::SearchByAuthor(author.clone()))
+            .style(move |_theme, status| {
+                let (background, text_color, border_color) = match status {
+                    button::Status::Hovered => (
+                        Some(Background::Color(Color::from_rgba(
+                            theme_colors.accent_border.r,
+                            theme_colors.accent_border.g,
+                            theme_colors.accent_border.b,
+                            0.1,
+                        ))),
+                        theme_colors.accent_border,
+                        theme_colors.accent_border,
+                    ),
+                    button::Status::Pressed => (
+                        Some(Background::Color(Color::from_rgba(
+                            theme_colors.accent_border.r,
+                            theme_colors.accent_border.g,
+                            theme_colors.accent_border.b,
+                            0.2,
+                        ))),
+                        theme_colors.text_primary,
+                        theme_colors.accent_border,
+                    ),
+                    _ => (
+                        None,
+                        theme_colors.accent_border,
+                        Color::TRANSPARENT,
+                    ),
+                };
+                
+                button::Style {
+                    background,
+                    text_color,
+                    border: Border {
+                        color: border_color,
+                        width: if border_color == Color::TRANSPARENT { 0.0 } else { 1.0 },
+                        radius: 4.0.into(),
+                    },
+                    shadow: Shadow::default(),
+                }
+            });
+            
+            author_row = author_row.push(author_button);
+        }
+
+        // 如果需要，添加 "et al."
+        if show_et_al {
+            author_row = author_row.push(
+                text(", et al.")
+                    .color(theme_colors.text_muted)
+                    .size(base_font_size * 0.86)
+                    .font(current_font)
+            );
+        }
+
+        // 将作者行包装在容器中以便于对齐
+        container(author_row)
+            .width(iced::Length::Fill)
             .into()
     }
 }

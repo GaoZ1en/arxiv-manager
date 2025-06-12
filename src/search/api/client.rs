@@ -23,7 +23,18 @@ pub async fn search_arxiv_papers(query: String) -> Result<Vec<ArxivPaper>, Strin
 
 /// 高级搜索功能 - 支持完整配置
 pub async fn search_arxiv_papers_advanced(config: SearchConfig) -> Result<Vec<ArxivPaper>, String> {
-    if config.query.trim().is_empty() {
+    // 检查是否有任何搜索条件
+    let has_search_criteria = !config.query.trim().is_empty() 
+        || !config.authors.is_empty()
+        || !config.categories.is_empty()
+        || config.exact_phrase.as_ref().map_or(false, |p| !p.trim().is_empty())
+        || !config.exclude_words.is_empty()
+        || config.journal_ref.as_ref().map_or(false, |j| !j.trim().is_empty())
+        || config.subject_class.as_ref().map_or(false, |s| !s.trim().is_empty())
+        || config.report_number.as_ref().map_or(false, |r| !r.trim().is_empty())
+        || !config.id_list.is_empty();
+    
+    if !has_search_criteria {
         return Ok(vec![]);
     }
 
