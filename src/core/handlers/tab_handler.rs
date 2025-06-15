@@ -18,8 +18,6 @@ pub trait TabHandler {
     
     // 新增的标签页操作
     fn handle_tab_right_clicked(&mut self, tab_index: usize, position: iced::Point) -> Task<Message>;
-    fn handle_tab_pin(&mut self, tab_index: usize) -> Task<Message>;
-    fn handle_tab_unpin(&mut self, tab_index: usize) -> Task<Message>;
     fn handle_tab_move_to_group(&mut self, tab_index: usize, group: TabGroup) -> Task<Message>;
     fn handle_tab_duplicate(&mut self, tab_index: usize) -> Task<Message>;
     fn handle_close_tabs_to_right(&mut self, tab_index: usize) -> Task<Message>;
@@ -77,17 +75,17 @@ impl TabHandler for ArxivManager {
 
     fn handle_new_tab(&mut self, content: TabContent) -> Task<Message> {
         let title = match &content {
-            TabContent::Search => "搜索".to_string(),
-            TabContent::Library => "论文库".to_string(),
-            TabContent::Downloads => "下载".to_string(),
-            TabContent::Settings => "设置".to_string(),
+            TabContent::Search => "Search".to_string(),
+            TabContent::Library => "Library".to_string(),
+            TabContent::Downloads => "Downloads".to_string(),
+            TabContent::Settings => "Settings".to_string(),
             TabContent::PaperView(index) => {
                 if let Some(paper) = self.saved_papers.get(*index) {
                     Self::generate_paper_tab_title(paper)
                 } else {
-                    "论文详情".to_string()
+                    "Paper Detail".to_string()
                 }
-            }
+            },
         };
         
         let new_tab = Tab::new(self.next_tab_id, title, content);
@@ -123,28 +121,6 @@ impl TabHandler for ArxivManager {
             // 使用传入的位置显示菜单
             self.context_menu.x = position.x;
             self.context_menu.y = position.y;
-        }
-        Task::none()
-    }
-    
-    fn handle_tab_pin(&mut self, tab_index: usize) -> Task<Message> {
-        if tab_index < self.tabs.len() {
-            self.tabs[tab_index].pin();
-            self.sort_tabs_by_groups();
-            if let Err(e) = self.handle_save_session_internal() {
-                log::warn!("Failed to save session after pinning tab: {}", e);
-            }
-        }
-        Task::none()
-    }
-    
-    fn handle_tab_unpin(&mut self, tab_index: usize) -> Task<Message> {
-        if tab_index < self.tabs.len() {
-            self.tabs[tab_index].unpin();
-            self.sort_tabs_by_groups();
-            if let Err(e) = self.handle_save_session_internal() {
-                log::warn!("Failed to save session after unpinning tab: {}", e);
-            }
         }
         Task::none()
     }

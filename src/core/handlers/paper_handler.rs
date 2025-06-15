@@ -5,6 +5,7 @@ use iced::Task;
 
 use crate::core::{ArxivManager, ArxivPaper, TabContent, Tab};
 use crate::core::messages::Message;
+use crate::core::handlers::library_handler::LibraryHandler;
 
 pub trait PaperHandler {
     fn handle_paper_save(&mut self, paper: ArxivPaper) -> Task<Message>;
@@ -17,10 +18,16 @@ pub trait PaperHandler {
 }
 
 impl PaperHandler for ArxivManager {
-    fn handle_paper_save(&mut self, paper: ArxivPaper) -> Task<Message> {
+    fn handle_paper_save(&mut self, mut paper: ArxivPaper) -> Task<Message> {
         // 检查是否已经保存
         if !self.saved_papers.iter().any(|p| p.id == paper.id) {
+            // 设置添加时间为当前时间
+            if paper.added_at.is_none() {
+                paper.added_at = Some(chrono::Utc::now());
+            }
             self.saved_papers.push(paper);
+            // 应用过滤和排序，以便立即更新视图
+            self.apply_library_filters_and_sorting();
         }
         Task::none()
     }
@@ -62,6 +69,9 @@ impl PaperHandler for ArxivManager {
                     }
                 }
             }
+            
+            // 重新应用过滤和排序，以便立即更新视图
+            self.apply_library_filters_and_sorting();
         }
         Task::none()
     }

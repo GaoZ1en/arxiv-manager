@@ -43,54 +43,18 @@ impl ContextMenu {
 
         let mut menu_items = column![];
 
-        // Pin/Unpin
-        if tab.pinned {
-            menu_items = menu_items.push(
-                button(
-                    text("Unpin")
-                        .size(base_font_size * 0.9)
-                        .font(current_font)
-                        .color(theme_colors.text_primary)
-                )
-                .on_press(Message::TabUnpin(state.tab_index))
-                .style(button_secondary_style_dynamic(&app.settings.theme))
-                .width(Length::Fill)
-                .padding([4.0 * scale, 8.0 * scale])
-            );
-        } else {
-            menu_items = menu_items.push(
-                button(
-                    text("Pin Tab")
-                        .size(base_font_size * 0.9)
-                        .font(current_font)
-                        .color(theme_colors.text_primary)
-                )
-                .on_press(Message::TabPin(state.tab_index))
-                .style(button_secondary_style_dynamic(&app.settings.theme))
-                .width(Length::Fill)
-                .padding([4.0 * scale, 8.0 * scale])
-            );
-        }
-
-        // Separator
+        // Duplicate Tab
         menu_items = menu_items.push(
-            container(text("").height(1))
-                .style(move |_theme: &iced::Theme| {
-                    container::Style {
-                        background: Some(Background::Color(theme_colors.border_color)),
-                        ..Default::default()
-                    }
-                })
-                .width(Length::Fill)
-                .padding([2.0 * scale, 0.0])
-        );
-
-        // Move to group submenu
-        menu_items = menu_items.push(
-            text("Move to Group:")
-                .size(base_font_size * 0.8)
-                .font(current_font)
-                .color(theme_colors.text_muted)
+            button(
+                text("Duplicate")
+                    .size(base_font_size * 0.9)
+                    .font(current_font)
+                    .color(theme_colors.text_primary)
+            )
+            .on_press(Message::TabDuplicate(state.tab_index))
+            .style(button_secondary_style_dynamic(&app.settings.theme))
+            .width(Length::Fill)
+            .padding([4.0 * scale, 8.0 * scale])
         );
 
         // Group options

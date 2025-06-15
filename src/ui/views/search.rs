@@ -9,7 +9,7 @@ use iced::{Element, Length, Background, Border, Shadow};
 use crate::core::app_state::ArxivManager;
 use crate::core::models::{SearchField, SortBy, SortOrder, DateRange, ArxivCategory};
 use crate::core::messages::Message;
-use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, text_input_dynamic_style, chat_container_dynamic_style, pick_list_dynamic_style, scrollable_style_dynamic};
+use crate::ui::style::{button_primary_style_dynamic, button_secondary_style_dynamic, text_input_dynamic_style, chat_container_dynamic_style, pick_list_dynamic_style, scrollable_tab_style_dynamic_with_fade, ultra_thin_vertical_scrollbar};
 use crate::ui::components::WaterfallLayout;
 
 pub struct SearchView;
@@ -37,7 +37,7 @@ impl SearchView {
         )
         .on_press(Message::SearchSubmitted)
         .style(button_primary_style_dynamic(&app.settings.theme))
-        .padding([10.0 * scale, 16.0 * scale]);
+        .padding([10.0 * scale, 8.0 * scale]);
 
         let advanced_toggle = button(
             text(if app.advanced_search_visible { "Hide Advanced" } else { "Advanced" })
@@ -47,7 +47,7 @@ impl SearchView {
         )
         .on_press(Message::AdvancedSearchToggled)
         .style(button_secondary_style_dynamic(&app.settings.theme))
-        .padding([10.0 * scale, 16.0 * scale]);
+        .padding([10.0 * scale, 8.0 * scale]);
 
         let search_bar = row![search_input, search_button, advanced_toggle]
             .spacing(12.0 * scale)
@@ -146,9 +146,8 @@ impl SearchView {
             .padding(24.0 * scale)
             .align_x(iced::Alignment::Center)
         } else {
-            // 使用瀑布流布局显示搜索结果
-            let columns = WaterfallLayout::calculate_columns(800.0, 300.0); // 假设容器宽度800px，最小卡片宽度300px
-            let waterfall = WaterfallLayout::view(app, &app.search_results, columns);
+            // 使用智能瀑布流布局显示搜索结果（搜索视图专用）
+            let waterfall = WaterfallLayout::search_view(app, &app.search_results);
             
             let mut results_column = vec![waterfall.into()];
             
@@ -191,15 +190,20 @@ impl SearchView {
                     .padding(16.0 * scale)
                     .width(Length::Fill)
             )
-            .style(scrollable_style_dynamic(&app.settings.theme))
+            .direction(ultra_thin_vertical_scrollbar())
+            .style(scrollable_tab_style_dynamic_with_fade(
+                &app.settings.theme, 
+                app.get_scrollbar_alpha("search_view")
+            ))
             .height(Length::Fill)
             .on_scroll(|viewport| {
-                // 检测是否滚动到了底部（留一些缓冲区域）
+                // 记录滚动条活动并检测是否滚动到了底部
                 let scroll_threshold = 0.9; // 90%位置就开始加载
                 if viewport.relative_offset().y >= scroll_threshold {
                     Message::ScrolledToBottom
                 } else {
-                    Message::HideSearchSuggestions // 使用一个无害的消息作为占位符
+                    // 发送滚动条活动消息
+                    Message::ScrollbarActivity("search_view".to_string())
                 }
             })
             .into()

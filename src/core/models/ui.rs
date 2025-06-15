@@ -319,3 +319,115 @@ impl Language {
         ]
     }
 }
+
+// Library视图相关的排序和显示选项
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LibrarySortBy {
+    Title,           // 按标题排序
+    Author,          // 按作者排序
+    PublishDate,     // 按发布时间排序
+    AddedDate,       // 按添加时间排序
+    Category,        // 按分类排序
+    Relevance,       // 按相关性排序
+}
+
+impl LibrarySortBy {
+    pub fn display_name(&self) -> &str {
+        match self {
+            LibrarySortBy::Title => "Title",
+            LibrarySortBy::Author => "Author", 
+            LibrarySortBy::PublishDate => "Publish Date",
+            LibrarySortBy::AddedDate => "Added Date",
+            LibrarySortBy::Category => "Category",
+            LibrarySortBy::Relevance => "Relevance",
+        }
+    }
+
+    pub fn all_variants() -> Vec<Self> {
+        vec![
+            LibrarySortBy::Title,
+            LibrarySortBy::Author,
+            LibrarySortBy::PublishDate,
+            LibrarySortBy::AddedDate,
+            LibrarySortBy::Category,
+            LibrarySortBy::Relevance,
+        ]
+    }
+}
+
+impl std::fmt::Display for LibrarySortBy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LibraryGroupBy {
+    None,            // 不分组
+    Author,          // 按作者分组
+    Category,        // 按分类分组
+    PublishYear,     // 按发布年份分组
+    AddedDate,       // 按添加日期分组
+    Tag,             // 按标签分组
+}
+
+impl LibraryGroupBy {
+    pub fn display_name(&self) -> &str {
+        match self {
+            LibraryGroupBy::None => "No Grouping",
+            LibraryGroupBy::Author => "By Author",
+            LibraryGroupBy::Category => "By Category", 
+            LibraryGroupBy::PublishYear => "By Year",
+            LibraryGroupBy::AddedDate => "By Added Date",
+            LibraryGroupBy::Tag => "By Tag",
+        }
+    }
+
+    pub fn all_variants() -> Vec<Self> {
+        vec![
+            LibraryGroupBy::None,
+            LibraryGroupBy::Author,
+            LibraryGroupBy::Category,
+            LibraryGroupBy::PublishYear,
+            LibraryGroupBy::AddedDate,
+            LibraryGroupBy::Tag,
+        ]
+    }
+}
+
+impl std::fmt::Display for LibraryGroupBy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum LibraryViewMode {
+    Waterfall,       // 瀑布流视图（唯一选项）
+}
+
+impl LibraryViewMode {
+    pub fn display_name(&self) -> &str {
+        match self {
+            LibraryViewMode::Waterfall => "Waterfall",
+        }
+    }
+
+    pub fn all_variants() -> Vec<Self> {
+        vec![
+            LibraryViewMode::Waterfall,
+        ]
+    }
+}
+
+impl Default for LibraryViewMode {
+    fn default() -> Self {
+        LibraryViewMode::Waterfall
+    }
+}
+
+impl std::fmt::Display for LibraryViewMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.display_name())
+    }
+}

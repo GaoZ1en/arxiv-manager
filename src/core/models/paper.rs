@@ -1,7 +1,9 @@
 // 论文相关的数据模型
 use std::path::PathBuf;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ArxivPaper {
     pub id: String,
     pub title: String,
@@ -21,6 +23,156 @@ pub struct ArxivPaper {
     pub journal_ref: Option<String>,
     #[allow(dead_code)]
     pub comments: Option<String>,
+    // Library功能相关字段
+    pub is_favorite: bool,                          // 是否为收藏
+    pub added_at: Option<DateTime<Utc>>,           // 添加到库的时间
+    pub collection_ids: Vec<i64>,                  // 所属集合ID列表
+    pub tags: Vec<String>,                         // 用户标签
+    pub notes: Option<String>,                     // 用户笔记
+    pub read_status: ReadingStatus,                // 阅读状态
+    pub rating: Option<u8>,                        // 用户评分 (1-5)
+    pub local_file_path: Option<String>,           // 本地PDF文件路径
+}
+
+/// 阅读状态
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub enum ReadingStatus {
+    #[default]
+    Unread,        // 未读
+    Reading,       // 正在阅读
+    Read,         // 已读
+    Skipped,      // 跳过
+}
+
+impl ReadingStatus {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            ReadingStatus::Unread => "Unread",
+            ReadingStatus::Reading => "Reading",
+            ReadingStatus::Read => "Read",
+            ReadingStatus::Skipped => "Skipped",
+        }
+    }
+    
+    pub fn all_variants() -> Vec<Self> {
+        vec![
+            ReadingStatus::Unread,
+            ReadingStatus::Reading,
+            ReadingStatus::Read,
+            ReadingStatus::Skipped,
+        ]
+    }
+}
+
+impl ArxivPaper {
+    /// 创建新的论文实例，自动设置添加时间
+    pub fn new_with_library_data(
+        id: String,
+        title: String,
+        authors: Vec<String>,
+        abstract_text: String,
+        published: String,
+        updated: String,
+        categories: Vec<String>,
+        pdf_url: String,
+        entry_url: String,
+        doi: Option<String>,
+        journal_ref: Option<String>,
+        comments: Option<String>,
+    ) -> Self {
+        Self {
+            id,
+            title,
+            authors,
+            abstract_text,
+            published,
+            updated,
+            categories,
+            pdf_url,
+            entry_url,
+            doi,
+            journal_ref,
+            comments,
+            is_favorite: false,
+            added_at: Some(Utc::now()),
+            collection_ids: Vec::new(),
+            tags: Vec::new(),
+            notes: None,
+            read_status: ReadingStatus::Unread,
+            rating: None,
+            local_file_path: None,
+        }
+    }
+
+    /// 切换收藏状态
+    pub fn toggle_favorite(&mut self) {
+        self.is_favorite = !self.is_favorite;
+    }
+
+    /// 添加到集合
+    pub fn add_to_collection(&mut self, collection_id: i64) {
+        if !self.collection_ids.contains(&collection_id) {
+            self.collection_ids.push(collection_id);
+        }
+    }
+
+    /// 从集合中移除
+    pub fn remove_from_collection(&mut self, collection_id: i64) {
+        self.collection_ids.retain(|&id| id != collection_id);
+    }
+
+    /// 检查是否属于特定集合
+    pub fn belongs_to_collection(&self, collection_id: i64) -> bool {
+        self.collection_ids.contains(&collection_id)
+    }
+
+    /// 检查是否为未分类（不属于任何用户集合）
+    pub fn is_uncategorized(&self) -> bool {
+        self.collection_ids.iter().all(|&id| id < 0) // 负数ID为系统集合
+    }
+
+    /// 添加标签
+    pub fn add_tag(&mut self, tag: String) {
+        if !self.tags.contains(&tag) {
+            self.tags.push(tag);
+        }
+    }
+
+    /// 移除标签
+    pub fn remove_tag(&mut self, tag: &str) {
+        self.tags.retain(|t| t != tag);
+    }
+
+    /// 设置评分
+    pub fn set_rating(&mut self, rating: Option<u8>) {
+        if let Some(r) = rating {
+            if r <= 5 {
+                self.rating = Some(r);
+            }
+        } else {
+            self.rating = None;
+        }
+    }
+
+    /// 设置笔记
+    pub fn set_notes(&mut self, notes: Option<String>) {
+        self.notes = notes;
+    }
+
+    /// 设置阅读状态
+    pub fn set_read_status(&mut self, status: ReadingStatus) {
+        self.read_status = status;
+    }
+
+    /// 设置本地文件路径
+    pub fn set_local_file_path(&mut self, path: Option<String>) {
+        self.local_file_path = path;
+    }
+
+    /// 获取本地文件路径
+    pub fn get_local_file_path(&self) -> Option<&String> {
+        self.local_file_path.as_ref()
+    }
 }
 
 #[derive(Debug, Clone)]

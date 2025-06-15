@@ -167,6 +167,15 @@ impl ArxivClient {
             doi,
             journal_ref,
             comments,
+            // 新增的库管理字段
+            is_favorite: false,
+            added_at: None, // 论文保存时才设置
+            collection_ids: Vec::new(),
+            tags: Vec::new(),
+            notes: None,
+            read_status: crate::core::models::ReadingStatus::Unread,
+            rating: None,
+            local_file_path: None,
         }))
     }
     

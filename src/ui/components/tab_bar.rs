@@ -4,9 +4,8 @@ use iced::widget::{button, row, text, container, scrollable, mouse_area};
 use iced::{Element, Length, Alignment, Point};
 
 use crate::core::app_state::ArxivManager;
-use crate::core::models::TabContent;
 use crate::core::messages::Message;
-use crate::ui::style::{tab_active_dynamic_style, tab_inactive_dynamic_style, tab_close_dynamic_style, tab_bar_container_dynamic_style, scrollable_style_dynamic};
+use crate::ui::style::{tab_active_dynamic_style, tab_inactive_dynamic_style, tab_close_dynamic_style, tab_bar_container_dynamic_style, scrollable_tab_style_dynamic_with_fade, ultra_thin_horizontal_scrollbar};
 
 pub struct TabBar;
 
@@ -21,81 +20,75 @@ impl TabBar {
         for (index, tab) in app.tabs.iter().enumerate() {
             let is_active = index == app.active_tab;
             
-            // 创建标签页内容，包含标题和可选的固定/关闭按钮
+            // 简化的标签页布局：只有标题和关闭按钮，保持一致性
             let mut tab_elements = vec![];
             
-            // 添加固定指示器（如果标签页被固定）
-            if tab.pinned {
-                tab_elements.push(
-                    text("*")
-                        .size(base_font_size * 0.8)
-                        .font(current_font)
-                        .color(theme_colors.accent_border)
-                        .into()
-                );
-            }
+            // 主标题区域 - 统一高度布局
+            let display_title = tab.title.clone();
             
-            // 添加分组指示器（如果不是默认分组）
-            if tab.group != crate::core::models::ui::TabGroup::Default {
-                let group_indicator = match &tab.group {
-                    crate::core::models::ui::TabGroup::Research => "R",
-                    crate::core::models::ui::TabGroup::Library => "L",
-                    crate::core::models::ui::TabGroup::Downloads => "D",
-                    crate::core::models::ui::TabGroup::Custom(_) => "C",
-                    _ => "",
-                };
-                if !group_indicator.is_empty() {
-                    tab_elements.push(
-                        text(group_indicator)
-                            .size(base_font_size * 0.8)
-                            .font(current_font)
-                            .color(theme_colors.text_muted)
-                            .into()
-                    );
-                }
-            }
-            
-            // Add title
             tab_elements.push(
-                text(&tab.title)
-                    .size(base_font_size * 0.93)
-                    .font(current_font)
-                    .color(if is_active { theme_colors.text_primary } else { theme_colors.text_secondary })
-                    .into()
+                container(
+                    text(display_title)
+                        .size(base_font_size * 0.93)
+                        .font(current_font)
+                        .color(if is_active { theme_colors.text_primary } else { theme_colors.text_secondary })
+                )
+                .width(Length::Fill)
+                .align_x(iced::alignment::Horizontal::Center)
+                .align_y(iced::alignment::Vertical::Center)  // 垂直居中
+                .padding([0.0, 4.0 * scale])
+                .height(Length::Fixed(18.0 * scale))  // 进一步减小高度
+                .into()
             );
             
-            // Add close button only
+            // 关闭按钮区域（固定宽度）
             if tab.closable {
                 tab_elements.push(
-                    button(text("x").size(base_font_size).font(current_font))
-                        .on_press(Message::TabClose(index))
-                        .style(tab_close_dynamic_style(&app.settings.theme))
-                        .padding([2.0 * scale, 4.0 * scale])
+                    container(
+                        button(text("×").size(base_font_size * 0.9).font(current_font))
+                            .on_press(Message::TabClose(index))
+                            .style(tab_close_dynamic_style(&app.settings.theme))
+                            .padding([1.0 * scale, 3.0 * scale])
+                    )
+                    .width(Length::Fixed(24.0 * scale)) // 较小的固定宽度
+                    .align_x(iced::alignment::Horizontal::Center)
+                    .into()
+                );
+            } else {
+                // 为不可关闭的标签页保留相同的空间
+                tab_elements.push(
+                    container(text(""))
+                        .width(Length::Fixed(24.0 * scale))
                         .into()
                 );
             }
             
             let tab_content = row(tab_elements)
-                .spacing(4.0 * scale)
+                .spacing(2.0 * scale)
                 .align_y(Alignment::Center);
+            
+            // 统一的标签页宽度和样式 - 更紧凑的设计
+            let tab_width = 100.0 * scale; // 进一步减小宽度
             
             let tab_button = if is_active {
                 button(tab_content)
                     .on_press(Message::TabClicked(index))
-                    .padding([2.0 * scale, 5.0 * scale])
+                    .width(Length::Fixed(tab_width))
+                    .padding([3.0 * scale, 4.0 * scale])  // 进一步减小内边距
                     .style(tab_active_dynamic_style(&app.settings.theme))
             } else {
                 button(tab_content)
                     .on_press(Message::TabClicked(index))
-                    .padding([2.0 * scale, 5.0 * scale])
+                    .width(Length::Fixed(tab_width))
+                    .padding([3.0 * scale, 4.0 * scale])  // 进一步减小内边距
                     .style(tab_inactive_dynamic_style(&app.settings.theme))
             };
 
-            // Simple right-click support using mouse_area
+            // 右键菜单支持
             let tab_with_context = mouse_area(tab_button)
                 .on_right_press(Message::TabRightClicked { 
                     tab_index: index, 
-                    position: Point::new(200.0, 100.0) // 固定位置，简单但有效
+                    position: Point::new(200.0, 100.0)
                 });
 
             tabs_row = tabs_row.push(tab_with_context);
@@ -105,17 +98,16 @@ impl TabBar {
 
         // 使用可滚动容器承载标签页，应用现代化滚动条样式
         let scrollable_tabs = scrollable(tabs_row)
-            .direction(scrollable::Direction::Horizontal(
-                scrollable::Scrollbar::default()
-                    .width(1) // 极细的滚动条
-                    .margin(0)
-                    .scroller_width(1)
+            .direction(ultra_thin_horizontal_scrollbar())
+            .style(scrollable_tab_style_dynamic_with_fade(
+                &app.settings.theme, 
+                app.get_scrollbar_alpha("tab_bar")
             ))
-            .style(scrollable_style_dynamic(&app.settings.theme))
+            .on_scroll(|_| Message::ScrollbarActivity("tab_bar".to_string()))
             .width(Length::Fill);
 
         container(scrollable_tabs)
-            .padding([1.0 * scale, 5.0 * scale])
+            .padding(0) // 完全去掉padding，贴边显示
             .width(Length::Fill)
             .style(tab_bar_container_dynamic_style(&app.settings.theme))
             .into()

@@ -86,32 +86,49 @@ impl PaperCard {
             button(text("Save").color(Color::BLACK).size(base_font_size).font(current_font))
                 .on_press(Message::SavePaper(paper.clone()))
                 .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 16.0 * scale]),
+                .padding([8.0 * scale, 8.0 * scale]),
             button(text("Download").color(theme_colors.text_primary).size(base_font_size).font(current_font))
                 .on_press(Message::DownloadPaper(paper.clone()))
                 .style(button_secondary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 16.0 * scale]),
+                .padding([8.0 * scale, 8.0 * scale]),
         ]
         .spacing(8.0 * scale)
         .into()
     }
     
-    /// 创建Library视图的按钮 - Remove、Download和View
+    /// 创建Library视图的按钮 - Favorite、Remove、Download、View PDF和View
     fn create_library_buttons<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
         let theme_colors = app.theme_colors();
         let current_font = app.current_font();
         let base_font_size = app.current_font_size();
         let scale = app.current_scale();
         
-        row![
+        let favorite_text = if paper.is_favorite { "Unfavorite" } else { "Favorite" };
+        let favorite_style = if paper.is_favorite {
+            button_primary_style_dynamic(&app.settings.theme)
+        } else {
+            button_primary_style_dynamic(&app.settings.theme) // 使用相同的样式函数
+        };
+        
+        let mut buttons = vec![
+            button(text(favorite_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::TogglePaperFavorite(paper.id.clone()))
+                .style(favorite_style)
+                .padding([8.0 * scale, 8.0 * scale])
+                .into(),
             button(text("Remove").color(Color::WHITE).size(base_font_size).font(current_font))
                 .on_press(Message::RemovePaper(paper.id.clone()))
                 .style(button_danger_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 16.0 * scale]),
+                .padding([8.0 * scale, 8.0 * scale])
+                .into(),
             button(text("Download").color(Color::BLACK).size(base_font_size).font(current_font))
                 .on_press(Message::DownloadPaper(paper.clone()))
                 .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 16.0 * scale]),
+                .padding([8.0 * scale, 8.0 * scale])
+                .into(),
+        ];
+        
+        buttons.push(
             button(text("View").color(theme_colors.text_primary).size(base_font_size).font(current_font))
                 .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
                     Message::NewTab(TabContent::PaperView(index))
@@ -119,8 +136,11 @@ impl PaperCard {
                     Message::NoOp
                 })
                 .style(button_secondary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 16.0 * scale]),
-        ]
+                .padding([8.0 * scale, 8.0 * scale])
+                .into()
+        );
+        
+        row(buttons)
         .spacing(8.0 * scale)
         .into()
     }
@@ -193,7 +213,7 @@ impl PaperCard {
         let theme_colors = app.theme_colors();
         let current_font = app.current_font();
         let base_font_size = app.current_font_size();
-        let scale = app.current_scale();
+        let _scale = app.current_scale(); // 可能在将来会用到
 
         if authors.is_empty() {
             return text("Unknown authors")
@@ -203,8 +223,8 @@ impl PaperCard {
                 .into();
         }
 
-        // 创建作者按钮的行
-        let mut author_row = row![].spacing(4.0 * scale);
+        // 创建作者按钮的行，确保垂直对齐
+        let mut author_row = row![].spacing(0).align_y(iced::Alignment::Center);
         
         // 决定要显示的作者数量
         let (display_authors, show_et_al) = match limit {
@@ -218,20 +238,24 @@ impl PaperCard {
             // 添加逗号分隔符（除了第一个作者）
             if i > 0 {
                 author_row = author_row.push(
-                    text(", ")
-                        .color(theme_colors.text_muted)
-                        .size(base_font_size * 0.86)
-                        .font(current_font)
+                    container(
+                        text(", ")
+                            .color(theme_colors.text_muted)
+                            .size(base_font_size * 0.86)
+                            .font(current_font)
+                    )
+                    .align_y(iced::alignment::Vertical::Center)
                 );
             }
             
-            // 创建可点击的作者按钮
+            // 创建可点击的作者按钮，移除默认padding以确保对齐
             let author_button = button(
                 text(author)
                     .color(theme_colors.accent_border)
                     .size(base_font_size * 0.86)
                     .font(current_font)
             )
+            .padding(0) // 移除按钮的默认padding
             .on_press(Message::SearchByAuthor(author.clone()))
             .style(move |_theme, status| {
                 let (background, text_color, border_color) = match status {
@@ -268,7 +292,7 @@ impl PaperCard {
                     border: Border {
                         color: border_color,
                         width: if border_color == Color::TRANSPARENT { 0.0 } else { 1.0 },
-                        radius: 4.0.into(),
+                        radius: 2.0.into(), // 减小圆角半径
                     },
                     shadow: Shadow::default(),
                 }
@@ -280,10 +304,13 @@ impl PaperCard {
         // 如果需要，添加 "et al."
         if show_et_al {
             author_row = author_row.push(
-                text(", et al.")
-                    .color(theme_colors.text_muted)
-                    .size(base_font_size * 0.86)
-                    .font(current_font)
+                container(
+                    text(", et al.")
+                        .color(theme_colors.text_muted)
+                        .size(base_font_size * 0.86)
+                        .font(current_font)
+                )
+                .align_y(iced::alignment::Vertical::Center)
             );
         }
 

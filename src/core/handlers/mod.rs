@@ -8,6 +8,8 @@ pub mod settings_handler;
 pub mod command_handler;
 pub mod paper_handler;
 pub mod shortcut_handler;
+pub mod collection_handler;
+pub mod library_handler;
 
 // 重新导出处理器 trait
 pub use tab_handler::TabHandler;
@@ -17,3 +19,5 @@ pub use settings_handler::SettingsHandler;
 pub use command_handler::CommandHandler;
 pub use paper_handler::PaperHandler;
 pub use shortcut_handler::ShortcutHandler;
+pub use collection_handler::CollectionHandler;
+pub use library_handler::LibraryHandler;

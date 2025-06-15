@@ -3,7 +3,7 @@
 use iced::widget::pane_grid;
 use std::path::PathBuf;
 
-use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder, ArxivCategory};
+use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder, ArxivCategory, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -43,6 +43,34 @@ pub enum Message {
     DownloadFailed { paper_id: String, error: String },
     SavePaper(ArxivPaper),
     RemovePaper(String),
+    // Collection/Folder 操作
+    CreateCollection { name: String, parent_id: Option<i64> },
+    RenameCollection { id: i64, new_name: String },
+    StartRenameCollection(i64), // 开始重命名集合
+    CancelRenameCollection,     // 取消重命名
+    CollectionRenameInputChanged(String), // 重命名输入框内容改变
+    DeleteCollection(i64),
+    MoveCollection { id: i64, new_parent_id: Option<i64> },
+    ToggleCollectionExpanded(i64),
+    AddPaperToCollection { paper_index: usize, collection_id: i64 },
+    RemovePaperFromCollection { paper_index: usize, collection_id: i64 },
+    SelectCollection(Option<i64>), // None表示显示所有论文
+    CollectionCreated(i64), // 创建成功的回调
+    CollectionUpdated(i64), // 更新成功的回调
+    CollectionDeleted(i64), // 删除成功的回调
+    LoadCollections, // 加载所有集合
+    CollectionsLoaded(Vec<crate::core::models::Collection>), // 集合加载完成
+    // 论文管理功能
+    TogglePaperFavorite(String), // 切换论文收藏状态 (paper_id)
+    SetPaperRating { paper_id: String, rating: Option<u8> },
+    SetPaperReadStatus { paper_id: String, status: crate::core::models::ReadingStatus },
+    AddPaperTag { paper_id: String, tag: String },
+    RemovePaperTag { paper_id: String, tag: String },
+    SetPaperNotes { paper_id: String, notes: Option<String> },
+    // 文章排序和显示
+    LibrarySortChanged(LibrarySortBy),
+    LibraryGroupChanged(LibraryGroupBy),
+    LibraryViewModeChanged(LibraryViewMode),
     // 设置消息
     ThemeChanged(crate::core::models::Theme),
     DownloadDirectoryChanged(String),
@@ -98,8 +126,6 @@ pub enum Message {
     // 右键菜单操作
     TabRightClicked { tab_index: usize, position: iced::Point },
     HideContextMenu,
-    TabPin(usize),
-    TabUnpin(usize),
     TabMoveToGroup(usize, crate::core::models::ui::TabGroup),
     TabDuplicate(usize),
     CloseTabsToRight(usize),
@@ -108,6 +134,13 @@ pub enum Message {
     // 会话管理
     SaveSession,
     LoadSession,
+    // 窗口事件
+    WindowResized { width: f32, height: f32 },
+    // 滚动条相关消息
+    ScrollbarActivity(String), // 滚动条标识符
+    ScrollbarHovered(String, bool), // 滚动条标识符和悬停状态
+    ScrollbarDragged(String, bool), // 滚动条标识符和拖拽状态
+    ScrollbarTick, // 定时检查淡出
 }
 
 #[derive(Debug, Clone)]

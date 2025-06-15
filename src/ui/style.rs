@@ -185,10 +185,14 @@ pub fn sidebar_container_dynamic_style(theme: &ThemeVariant) -> impl Fn(&iced::T
             border: Border {
                 color: colors.border_color,
                 width: 1.0,
-                radius: 0.0.into(),
+                radius: 8.0.into(), // 与主视图保持一致的圆角
             },
             text_color: Some(colors.text_primary),
-            shadow: Shadow::default(),
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.1),
+                offset: iced::Vector::new(2.0, 0.0),
+                blur_radius: 8.0,
+            },
         }
     }
 }
@@ -424,10 +428,14 @@ pub fn tab_bar_container_dynamic_style(theme: &ThemeVariant) -> impl Fn(&iced::T
             border: Border {
                 color: colors.border_color,
                 width: 1.0,
-                radius: 0.0.into(),
+                radius: 8.0.into(), // 与主视图保持一致的圆角
             },
             text_color: Some(colors.text_primary),
-            shadow: Shadow::default(),
+            shadow: Shadow {
+                color: Color::from_rgba(0.0, 0.0, 0.0, 0.1),
+                offset: iced::Vector::new(0.0, 2.0),
+                blur_radius: 8.0,
+            },
         }
     }
 }
@@ -600,4 +608,113 @@ pub fn scrollable_style_dynamic(theme: &ThemeVariant) -> impl Fn(&iced::Theme, i
             gap: None,
         }
     }
+}
+
+// 类似标签栏的现代化滚动条样式 - 竖直方向，带动画和自动淡出
+pub fn scrollable_tab_style_dynamic_with_fade(
+    theme: &ThemeVariant, 
+    fade_alpha: f32
+) -> impl Fn(&iced::Theme, iced::widget::scrollable::Status) -> iced::widget::scrollable::Style {
+    let colors = get_theme_colors(theme);
+    move |_theme, status| {
+        use iced::widget::scrollable;
+        
+        // 类似标签栏的滚动条设计 - 更加现代化，带渐变动画和自动淡出
+        let (base_scroller_color, scroller_border_radius, rail_background, base_alpha) = match status {
+            scrollable::Status::Hovered { .. } => {
+                // 悬停时：完全可见，流畅显示
+                (
+                    colors.accent_border, 
+                    8.0, // 圆角类似标签栏
+                    Some(Background::Color(Color { a: 0.15 * fade_alpha, ..colors.accent_border })),
+                    1.0 // 完全不透明
+                )
+            }
+            scrollable::Status::Active { .. } => {
+                // 滚动时：高亮显示，吸引注意
+                (
+                    colors.accent_border, 
+                    8.0,
+                    Some(Background::Color(Color { a: 0.2 * fade_alpha, ..colors.accent_border })),
+                    1.0
+                )
+            }
+            scrollable::Status::Dragged { .. } => {
+                // 拖拽时：最高亮显示，提供最佳反馈
+                (
+                    colors.accent_border, 
+                    8.0,
+                    Some(Background::Color(Color { a: 0.25 * fade_alpha, ..colors.accent_border })),
+                    1.0
+                )
+            }
+        };
+        
+        // 应用淡出透明度
+        let final_alpha = base_alpha * fade_alpha;
+        
+        // 竖直滚动条 - 类似标签栏的设计，支持渐变动画和自动淡出
+        let vertical_rail = scrollable::Rail {
+            background: rail_background,
+            border: Border {
+                color: Color::TRANSPARENT,
+                width: 0.0,
+                radius: 6.0.into(), // 轨道圆角
+            },
+            scroller: scrollable::Scroller {
+                color: Color { a: final_alpha, ..base_scroller_color },
+                border: Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: scroller_border_radius.into(), // 滚动块圆角
+                },
+            },
+        };
+        
+        // 水平滚动条保持简单，但也支持淡出
+        let horizontal_rail = scrollable::Rail {
+            background: None,
+            border: Border::default(),
+            scroller: scrollable::Scroller {
+                color: Color { a: final_alpha * 0.3, ..colors.text_muted },
+                border: Border {
+                    radius: 2.0.into(),
+                    ..Default::default()
+                },
+            },
+        };
+
+        scrollable::Style {
+            container: container::Style::default(),
+            vertical_rail,
+            horizontal_rail,
+            gap: Some(Background::Color(Color::TRANSPARENT)), // 添加间隙颜色
+        }
+    }
+}
+
+// 向后兼容的滚动条样式（使用默认透明度）
+pub fn scrollable_tab_style_dynamic(theme: &ThemeVariant) -> impl Fn(&iced::Theme, iced::widget::scrollable::Status) -> iced::widget::scrollable::Style {
+    scrollable_tab_style_dynamic_with_fade(theme, 1.0)
+}
+
+// 创建超细滚动条的辅助函数
+pub fn ultra_thin_vertical_scrollbar() -> iced::widget::scrollable::Direction {
+    use iced::widget::scrollable;
+    scrollable::Direction::Vertical(
+        scrollable::Scrollbar::new()
+            .width(2)      // 极细的滚动条宽度
+            .margin(0)     // 无边距
+            .scroller_width(2)  // 极细的滚动块宽度
+    )
+}
+
+pub fn ultra_thin_horizontal_scrollbar() -> iced::widget::scrollable::Direction {
+    use iced::widget::scrollable;
+    scrollable::Direction::Horizontal(
+        scrollable::Scrollbar::new()
+            .width(2)      // 极细的滚动条宽度
+            .margin(0)     // 无边距
+            .scroller_width(2)  // 极细的滚动块宽度
+    )
 }

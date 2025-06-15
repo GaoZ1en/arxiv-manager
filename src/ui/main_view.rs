@@ -1,7 +1,7 @@
 // 现代化主视图 - IRC客户端风格布局
 
-use iced::widget::{column, container, row, stack, text, vertical_space};
-use iced::{Element, Length, Padding};
+use iced::widget::{column, container, row, stack, text};
+use iced::{Element, Length};
 
 use crate::core::app_state::ArxivManager;
 use crate::core::models::TabContent;
@@ -121,13 +121,11 @@ impl ArxivManager {
         // 创建带标签栏的内容区域 (类似IRC的消息区域)
         let content_area = container(
             column![
-                // 顶部标签栏 (类似IRC的频道标签)
-                container(TabBar::view(self))
-                    .padding(Padding::new(4.0)),
+                // 顶部标签栏 (类似IRC的频道标签) - 无内边距，直接贴边
+                TabBar::view(self),
                 
-                // 主内容区域
+                // 主内容区域 - 无内边距，直接贴边
                 container(current_content)
-                    .padding(Padding::new(12.0))
                     .height(Length::Fill)
                     .width(Length::Fill)
             ]
@@ -136,13 +134,13 @@ impl ArxivManager {
         .height(Length::Fill)
         .width(Length::Fill);
 
-        // 组合侧边栏和内容区域
+        // 组合侧边栏和内容区域 - 无间距，直接贴合
         let base_layout: Element<Message> = if let Some(sidebar) = sidebar {
             row![
                 sidebar,
                 content_area
             ]
-            .spacing(0)
+            .spacing(0) // 完全无间距，直接贴合
             .width(Length::Fill)
             .height(Length::Fill)
             .into()

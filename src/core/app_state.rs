@@ -5,14 +5,85 @@ use std::time::Instant;
 use std::collections::HashMap;
 use iced::{Task, Subscription};
 
-use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent, SessionManager};
+use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent, SessionManager, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
 use crate::core::messages::{Message, Command};
 
 // 导入所有处理器
 use crate::core::handlers::{
     TabHandler, SearchHandler, DownloadHandler, SettingsHandler, 
-    CommandHandler, PaperHandler, ShortcutHandler
+    CommandHandler, PaperHandler, ShortcutHandler, LibraryHandler, CollectionHandler
 };
+
+/// 滚动条状态管理
+#[derive(Debug, Clone)]
+pub struct ScrollbarState {
+    pub last_activity: Instant,
+    pub is_hovered: bool,
+    pub is_dragged: bool,
+    pub should_fade: bool,
+    pub fade_delay: std::time::Duration,
+}
+
+impl ScrollbarState {
+    /// 创建新的滚动条状态
+    pub fn new() -> Self {
+        Self {
+            last_activity: Instant::now(),
+            is_hovered: false,
+            is_dragged: false,
+            should_fade: false,
+            fade_delay: std::time::Duration::from_secs(1), // 1秒后开始淡出
+        }
+    }
+    
+    /// 记录滚动条活动
+    pub fn record_activity(&mut self) {
+        self.last_activity = Instant::now();
+        self.should_fade = false;
+    }
+    
+    /// 设置悬停状态
+    pub fn set_hovered(&mut self, hovered: bool) {
+        self.is_hovered = hovered;
+        if hovered {
+            self.record_activity();
+        }
+    }
+    
+    /// 设置拖拽状态
+    pub fn set_dragged(&mut self, dragged: bool) {
+        self.is_dragged = dragged;
+        if dragged {
+            self.record_activity();
+        }
+    }
+    
+    /// 检查是否应该淡出
+    pub fn should_auto_fade(&self) -> bool {
+        !self.is_hovered && 
+        !self.is_dragged && 
+        self.last_activity.elapsed() > self.fade_delay
+    }
+    
+    /// 获取透明度值（0.0-1.0）
+    pub fn get_alpha(&self) -> f32 {
+        if self.is_dragged {
+            1.0 // 拖拽时完全不透明
+        } else if self.is_hovered {
+            0.8 // 悬停时稍微透明
+        } else if self.should_auto_fade() {
+            0.1 // 淡出时几乎透明
+        } else {
+            0.4 // 默认半透明
+        }
+    }
+}
+
+impl Default for ScrollbarState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // 搜索缓存项
 #[derive(Debug, Clone)]
@@ -43,6 +114,21 @@ pub struct ArxivManager {
     pub search_results: Vec<ArxivPaper>,
     pub saved_papers: Vec<ArxivPaper>,
     pub downloads: Vec<DownloadItem>,
+    // Collection/Library 管理
+    pub collections: Vec<crate::core::models::Collection>,
+    pub selected_collection_id: Option<i64>, // 当前选中的集合ID
+    pub collection_tree_expanded: HashMap<i64, bool>, // 集合展开状态
+    pub filtered_papers: Vec<ArxivPaper>, // 根据选中集合过滤的论文
+    pub is_creating_collection: bool,
+    pub collection_name_input: String,
+    pub collection_parent_id: Option<i64>, // 创建子集合时的父集合ID
+    // 集合重命名状态
+    pub editing_collection_id: Option<i64>, // 当前正在编辑的集合ID
+    pub collection_rename_input: String,   // 重命名输入框的内容
+    // Library视图设置
+    pub library_sort_by: LibrarySortBy,     // Library排序方式
+    pub library_group_by: LibraryGroupBy,   // Library分组方式
+    pub library_view_mode: LibraryViewMode, // Library显示模式
     pub is_searching: bool,
     pub search_error: Option<String>,
     pub last_interaction: Option<Instant>,
@@ -77,6 +163,11 @@ pub struct ArxivManager {
     pub shortcut_input: String,           // 快捷键输入缓存
     // 右键菜单状态
     pub context_menu: crate::ui::components::ContextMenuState,
+    // 窗口尺寸跟踪
+    pub window_width: f32,
+    pub window_height: f32,
+    // 滚动条状态管理
+    pub scrollbar_states: HashMap<String, ScrollbarState>,
 }
 
 impl ArxivManager {
@@ -111,6 +202,21 @@ impl ArxivManager {
             search_results: Vec::new(),
             saved_papers: Vec::new(),
             downloads: Vec::new(),
+            // Collection/Library 管理初始化
+            collections: Vec::new(),
+            selected_collection_id: None,
+            collection_tree_expanded: HashMap::new(),
+            filtered_papers: Vec::new(),
+            is_creating_collection: false,
+            collection_name_input: String::new(),
+            collection_parent_id: None,
+            // 集合重命名状态
+            editing_collection_id: None,
+            collection_rename_input: String::new(),
+            // Library视图设置默认值
+            library_sort_by: LibrarySortBy::Title,     // 默认按标题排序
+            library_group_by: LibraryGroupBy::None,    // 默认不分组
+            library_view_mode: LibraryViewMode::default(), // 默认瀑布流视图
             is_searching: false,
             search_error: None,
             last_interaction: None,
@@ -150,6 +256,11 @@ impl ArxivManager {
             shortcut_input: String::new(),
             // 右键菜单状态初始化
             context_menu: crate::ui::components::ContextMenuState::default(),
+            // 窗口尺寸初始化（默认尺寸）
+            window_width: 1400.0,
+            window_height: 900.0,
+            // 滚动条状态管理初始化
+            scrollbar_states: HashMap::new(),
         };
 
         // 确保标签页按分组排序
@@ -181,8 +292,6 @@ impl ArxivManager {
                 self.context_menu.visible = false;
                 Task::none()
             },
-            Message::TabPin(tab_index) => self.handle_tab_pin(tab_index),
-            Message::TabUnpin(tab_index) => self.handle_tab_unpin(tab_index),
             Message::TabMoveToGroup(tab_index, group) => self.handle_tab_move_to_group(tab_index, group),
             Message::TabDuplicate(tab_index) => self.handle_tab_duplicate(tab_index),
             Message::CloseTabsToRight(tab_index) => self.handle_close_tabs_to_right(tab_index),
@@ -275,6 +384,62 @@ impl ArxivManager {
             Message::FontSizeChanged(font_size) => self.handle_font_size_changed(font_size),
             Message::UIScaleChanged(ui_scale) => self.handle_ui_scale_changed(ui_scale),
 
+            // Library视图相关消息 - 委托给 LibraryHandler
+            Message::LibrarySortChanged(sort_by) => self.handle_library_sort_changed(sort_by),
+            Message::LibraryGroupChanged(group_by) => self.handle_library_group_changed(group_by),
+            Message::LibraryViewModeChanged(view_mode) => self.handle_library_view_mode_changed(view_mode),
+
+            // 论文管理功能消息 - 委托给 LibraryHandler
+            Message::TogglePaperFavorite(paper_id) => self.handle_toggle_paper_favorite(&paper_id),
+            Message::SetPaperRating { paper_id, rating } => self.handle_set_paper_rating(paper_id, rating),
+            Message::SetPaperReadStatus { paper_id, status } => self.handle_set_paper_read_status(paper_id, status),
+            Message::AddPaperTag { paper_id, tag } => self.handle_add_paper_tag(paper_id, tag),
+            Message::RemovePaperTag { paper_id, tag } => self.handle_remove_paper_tag(paper_id, tag),
+            Message::SetPaperNotes { paper_id, notes } => self.handle_set_paper_notes(paper_id, notes),
+
+            // Collection/文件夹相关消息 - 委托给 CollectionHandler
+            Message::CreateCollection { name, parent_id } => self.handle_create_collection(name, parent_id),
+            Message::RenameCollection { id, new_name } => self.handle_rename_collection(id, new_name),
+            Message::StartRenameCollection(id) => {
+                // 开始重命名：设置编辑状态，并预填充当前名称
+                if let Some(collection) = self.collections.iter().find(|c| c.id == id) {
+                    self.editing_collection_id = Some(id);
+                    self.collection_rename_input = collection.name.clone();
+                }
+                Task::none()
+            },
+            Message::CancelRenameCollection => {
+                // 取消重命名：清除编辑状态
+                self.editing_collection_id = None;
+                self.collection_rename_input.clear();
+                Task::none()
+            },
+            Message::CollectionRenameInputChanged(input) => {
+                // 更新重命名输入框内容
+                self.collection_rename_input = input;
+                Task::none()
+            },
+            Message::DeleteCollection(id) => self.handle_delete_collection(id),
+            Message::MoveCollection { id, new_parent_id } => self.handle_move_collection(id, new_parent_id),
+            Message::ToggleCollectionExpanded(id) => self.handle_toggle_collection_expanded(id),
+            Message::AddPaperToCollection { paper_index, collection_id } => self.handle_add_paper_to_collection(paper_index, collection_id),
+            Message::RemovePaperFromCollection { paper_index, collection_id } => self.handle_remove_paper_from_collection(paper_index, collection_id),
+            Message::SelectCollection(collection_id) => self.handle_select_collection(collection_id),
+            Message::LoadCollections => self.handle_load_collections(),
+            Message::CollectionsLoaded(collections) => self.handle_collections_loaded(collections),
+            Message::CollectionCreated(_id) => {
+                // 创建成功后可以进行一些额外处理，如刷新UI
+                Task::none()
+            },
+            Message::CollectionUpdated(_id) => {
+                // 更新成功后可以进行一些额外处理
+                Task::none()
+            },
+            Message::CollectionDeleted(_id) => {
+                // 删除成功后可以进行一些额外处理
+                Task::none()
+            },
+
             // 命令面板相关消息 - 委托给 CommandHandler
             Message::ToggleCommandPalette => self.handle_command_palette_toggled(),
             Message::CommandPaletteInputChanged(input) => self.handle_command_input_changed(input),
@@ -287,6 +452,39 @@ impl ArxivManager {
             Message::ShortcutEditCancelled => self.handle_shortcut_edit_cancelled(),
             Message::ShortcutInputChanged(input) => self.handle_shortcut_input_changed(input),
             Message::ResetShortcuts => self.handle_shortcuts_reset(),
+
+            // 窗口事件处理
+            Message::WindowResized { width, height } => {
+                self.window_width = width;
+                self.window_height = height;
+                Task::none()
+            },
+
+            // 滚动条相关消息
+            Message::ScrollbarActivity(id) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.record_activity();
+                Task::none()
+            },
+            Message::ScrollbarHovered(id, hovered) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.set_hovered(hovered);
+                Task::none()
+            },
+            Message::ScrollbarDragged(id, dragged) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.set_dragged(dragged);
+                Task::none()
+            },
+            Message::ScrollbarTick => {
+                // 更新所有滚动条的淡出状态
+                for state in self.scrollbar_states.values_mut() {
+                    if state.should_auto_fade() && !state.should_fade {
+                        state.should_fade = true;
+                    }
+                }
+                Task::none()
+            },
 
             // 其他消息
             _ => Task::none(), // 默认情况下不做任何操作
@@ -314,8 +512,27 @@ impl ArxivManager {
 
     // 订阅和主题方法保持不变
     pub fn subscription(&self) -> Subscription<Message> {
-        // 暂时返回空订阅，因为KeyPressed消息在当前枚举中不存在
-        Subscription::none()
+        use iced::time;
+        use std::time::Duration;
+        
+        // 批量订阅：窗口事件 + 滚动条淡出定时器
+        Subscription::batch([
+            // 订阅窗口事件以获取尺寸变化
+            iced::event::listen().map(|event| {
+                match event {
+                    iced::Event::Window(iced::window::Event::Resized(size)) => {
+                        Message::WindowResized { 
+                            width: size.width, 
+                            height: size.height 
+                        }
+                    },
+                    _ => Message::NoOp,
+                }
+            }),
+            
+            // 滚动条自动淡出定时器 - 每250毫秒检查一次
+            time::every(Duration::from_millis(250)).map(|_| Message::ScrollbarTick)
+        ])
     }
 
     pub fn theme(&self) -> iced::Theme {
@@ -698,6 +915,19 @@ impl ArxivManager {
             .collect();
         
         self.search_cache.retain(|query, _| keep_queries.contains(query));
+    }
+    
+    /// 获取滚动条状态
+    pub fn get_scrollbar_state(&self, id: &str) -> Option<&ScrollbarState> {
+        self.scrollbar_states.get(id)
+    }
+    
+    /// 获取滚动条透明度
+    pub fn get_scrollbar_alpha(&self, id: &str) -> f32 {
+        self.scrollbar_states
+            .get(id)
+            .map(|state| state.get_alpha())
+            .unwrap_or(0.4) // 默认透明度
     }
 }
 

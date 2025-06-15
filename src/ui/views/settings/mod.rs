@@ -6,11 +6,11 @@ pub mod shortcuts;
 pub mod components;
 
 use iced::widget::{column, container, scrollable, text, vertical_space};
-use iced::{Element, Background, Border, Shadow};
+use iced::Element;
 
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
-use crate::ui::style::scrollable_style_dynamic;
+use crate::ui::style::{scrollable_tab_style_dynamic_with_fade, chat_container_dynamic_style, ultra_thin_vertical_scrollbar};
 
 
 pub struct SettingsView;
@@ -49,16 +49,16 @@ impl SettingsView {
                     vertical_space().height(15.0 * scale),
                     shortcuts_section,
                 ].spacing(10.0 * scale)
+                .padding(20.0 * scale) // 将padding移到scrollable内部
             )
-            .style(scrollable_style_dynamic(&app.settings.theme))
+            .direction(ultra_thin_vertical_scrollbar())
+            .style(scrollable_tab_style_dynamic_with_fade(
+                &app.settings.theme, 
+                app.get_scrollbar_alpha("settings_view")
+            ))
+            .on_scroll(|_| Message::ScrollbarActivity("settings_view".to_string()))
         )
-        .padding(20.0 * scale)
-        .style(move |_theme| iced::widget::container::Style {
-            background: Some(Background::Color(theme_colors.dark_bg)),
-            border: Border::default(),
-            text_color: Some(theme_colors.text_primary),
-            shadow: Shadow::default(),
-        })
+        .style(chat_container_dynamic_style(&app.settings.theme))
         .into()
     }
 }

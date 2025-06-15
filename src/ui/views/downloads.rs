@@ -6,7 +6,7 @@ use iced::{Element, Length};
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
 use crate::ui::components::PaperCard;
-use crate::ui::style::{chat_container_dynamic_style, scrollable_style_dynamic};
+use crate::ui::style::{chat_container_dynamic_style, scrollable_tab_style_dynamic_with_fade, ultra_thin_vertical_scrollbar};
 
 pub struct DownloadsView;
 
@@ -21,15 +21,15 @@ impl DownloadsView {
             column![
                 text("Downloads")
                     .color(theme_colors.text_primary)
-                    .size(base_font_size * 1.43)
+                    .size(base_font_size * 1.5)  // 接近Settings的比例
                     .font(current_font),
                 text("No active downloads")
                     .color(theme_colors.text_muted)
-                    .size(base_font_size * 1.14)
+                    .size(base_font_size * 1.1)  // 稍微放大副标题
                     .font(current_font),
                 text("PDF downloads will appear here")
                     .color(theme_colors.text_secondary)
-                    .size(base_font_size)
+                    .size(base_font_size)  // 描述文字使用标准大小
                     .font(current_font)
             ]
             .spacing(12.0 * scale)
@@ -41,7 +41,7 @@ impl DownloadsView {
                 container(
                     text(format!("Downloads ({} active)", downloads_count))
                         .color(theme_colors.text_primary)
-                        .size(base_font_size * 1.29)
+                        .size(base_font_size * 1.1)  // 减小标题字体，与Settings保持一致
                         .font(current_font)
                 )
                 .padding(iced::Padding {
@@ -59,7 +59,12 @@ impl DownloadsView {
                             }).collect::<Vec<Element<Message>>>()
                         ).spacing(12)
                     )
-                    .style(scrollable_style_dynamic(&app.settings.theme))
+                    .direction(ultra_thin_vertical_scrollbar())
+                    .style(scrollable_tab_style_dynamic_with_fade(
+                        &app.settings.theme, 
+                        app.get_scrollbar_alpha("downloads_view")
+                    ))
+                    .on_scroll(|_| Message::ScrollbarActivity("downloads_view".to_string()))
                     .height(Length::Fill)
                 )
                 .padding(16)

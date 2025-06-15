@@ -59,8 +59,28 @@ pub fn parse_arxiv_xml(xml_content: &str) -> Result<Vec<ArxivPaper>, String> {
         // 提取分类信息
         let categories = extract_categories_from_entry(entry);
         
-        // 构建PDF URL
-        let pdf_url = format!("https://arxiv.org/pdf/{}.pdf", id);
+        // 构建PDF URL - 先尝试从link元素中找到PDF链接
+        let pdf_url = {
+            // 查找包含"pdf"的链接
+            if let Some(pdf_link) = extract_links(entry).into_iter()
+                .find(|link| link.contains("pdf")) {
+                pdf_link
+            } else {
+                // 回退到基于ID构建URL，处理旧格式的ID
+                let clean_id = if id.contains('/') {
+                    id.clone()
+                } else {
+                    // 对于纯数字ID，从完整的entry ID中提取类别
+                    extract_xml_content(entry, "id")
+                        .and_then(|full_id| {
+                            // full_id 格式通常是 "http://arxiv.org/abs/math/0311136v1"
+                            full_id.split("/abs/").nth(1).map(|s| s.to_string())
+                        })
+                        .unwrap_or(id.clone())
+                };
+                format!("https://arxiv.org/pdf/{}.pdf", clean_id)
+            }
+        };
         let entry_url = format!("https://arxiv.org/abs/{}", id);
         
         // 提取可选字段
@@ -81,6 +101,15 @@ pub fn parse_arxiv_xml(xml_content: &str) -> Result<Vec<ArxivPaper>, String> {
             doi,
             journal_ref,
             comments,
+            // 新增的库管理字段
+            is_favorite: false,
+            added_at: None, // 论文保存时才设置
+            collection_ids: Vec::new(),
+            tags: Vec::new(),
+            notes: None,
+            read_status: crate::core::models::ReadingStatus::Unread,
+            rating: None,
+            local_file_path: None,
         };
         
         papers.push(paper);
@@ -151,4 +180,32 @@ fn extract_xml_content(xml: &str, tag: &str) -> Option<String> {
     }
     
     None
+}
+
+/// 从entry中提取所有链接
+fn extract_links(entry: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    
+    // 查找所有 <link> 标签
+    let mut remaining = entry;
+    while let Some(start) = remaining.find("<link") {
+        if let Some(end) = remaining[start..].find("/>") {
+            let link_tag = &remaining[start..start + end + 2];
+            
+            // 提取href属性
+            if let Some(href_start) = link_tag.find("href=\"") {
+                let href_content_start = href_start + 6; // len("href=\"")
+                if let Some(href_end) = link_tag[href_content_start..].find("\"") {
+                    let href = &link_tag[href_content_start..href_content_start + href_end];
+                    links.push(href.to_string());
+                }
+            }
+            
+            remaining = &remaining[start + end + 2..];
+        } else {
+            break;
+        }
+    }
+    
+    links
 }

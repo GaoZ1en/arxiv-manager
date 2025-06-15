@@ -92,16 +92,16 @@ fn create_shortcut_edit_row<'a>(app: &'a ArxivManager, action: &'a str) -> Eleme
                     shortcut: app.shortcut_input.clone(),
                 })
                 .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([4.0 * scale, 8.0 * scale])
+                .padding([4.0 * scale, 4.0 * scale])
         } else {
             button(text("Confirm").size(base_font_size * 0.86).font(current_font))
                 .style(disabled_button_dynamic_style(&app.theme_colors()))
-                .padding([4.0 * scale, 8.0 * scale])
+                .padding([4.0 * scale, 4.0 * scale])
         },
         button(text("Cancel").size(base_font_size * 0.86).font(current_font))
             .on_press(Message::ShortcutEditCancelled)
             .style(button_secondary_style_dynamic(&app.settings.theme))
-            .padding([4.0 * scale, 8.0 * scale])
+            .padding([4.0 * scale, 4.0 * scale])
     ]
     .spacing(8.0 * scale)
     .align_y(iced::Alignment::Center)

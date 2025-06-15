@@ -11,6 +11,73 @@ use crate::utils::Result;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
+
+/// 滚动条状态管理
+#[derive(Debug, Clone)]
+pub struct ScrollbarState {
+    pub last_activity: Instant,
+    pub is_hovered: bool,
+    pub is_dragged: bool,
+    pub should_fade: bool,
+    pub fade_delay: Duration,
+}
+
+impl Default for ScrollbarState {
+    fn default() -> Self {
+        Self {
+            last_activity: Instant::now(),
+            is_hovered: false,
+            is_dragged: false,
+            should_fade: false,
+            fade_delay: Duration::from_secs(1), // 1秒后开始淡出
+        }
+    }
+}
+
+impl ScrollbarState {
+    /// 记录滚动条活动
+    pub fn record_activity(&mut self) {
+        self.last_activity = Instant::now();
+        self.should_fade = false;
+    }
+    
+    /// 设置悬停状态
+    pub fn set_hovered(&mut self, hovered: bool) {
+        self.is_hovered = hovered;
+        if hovered {
+            self.record_activity();
+        }
+    }
+    
+    /// 设置拖拽状态
+    pub fn set_dragged(&mut self, dragged: bool) {
+        self.is_dragged = dragged;
+        if dragged {
+            self.record_activity();
+        }
+    }
+    
+    /// 检查是否应该淡出
+    pub fn should_auto_fade(&self) -> bool {
+        !self.is_hovered && 
+        !self.is_dragged && 
+        self.last_activity.elapsed() > self.fade_delay
+    }
+    
+    /// 获取透明度值（0.0-1.0）
+    pub fn get_alpha(&self) -> f32 {
+        if self.is_dragged {
+            1.0 // 拖拽时完全不透明
+        } else if self.is_hovered {
+            0.8 // 悬停时稍微透明
+        } else if self.should_auto_fade() {
+            0.1 // 淡出时几乎透明
+        } else {
+            0.4 // 默认半透明
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
@@ -30,6 +97,12 @@ pub enum AppMessage {
     TabSelected(TabId),
     ThemeToggled,
     WindowResized,
+    
+    // Scrollbar related
+    ScrollbarActivity(String), // 滚动条标识符
+    ScrollbarHovered(String, bool),
+    ScrollbarDragged(String, bool),
+    ScrollbarTick, // 定时检查淡出
     
     // Database related
     LoadRecentPapers,
@@ -63,6 +136,9 @@ pub struct AppState {
     
     // 兼容性 - 保留原有的接口用于逐步迁移
     pub download_event_rx: mpsc::UnboundedReceiver<crate::downloader::DownloadEvent>,
+    
+    // 滚动条状态管理
+    pub scrollbar_states: HashMap<String, ScrollbarState>,
     
     // 临时字段用于向后兼容
     pub recent_papers: Vec<PaperRecord>,
@@ -107,6 +183,7 @@ impl AppState {
             database,
             download_manager,
             download_event_rx,
+            scrollbar_states: HashMap::new(),
             recent_papers: Vec::new(),
             selected_paper: None,
             window_size: (1200, 800),
@@ -210,6 +287,30 @@ impl AppState {
                 log::info!("Theme toggled");
             }
             
+            AppMessage::ScrollbarActivity(id) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.record_activity();
+            }
+            
+            AppMessage::ScrollbarHovered(id, hovered) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.set_hovered(hovered);
+            }
+            
+            AppMessage::ScrollbarDragged(id, dragged) => {
+                let state = self.scrollbar_states.entry(id).or_default();
+                state.set_dragged(dragged);
+            }
+            
+            AppMessage::ScrollbarTick => {
+                // 更新所有滚动条的淡出状态
+                for state in self.scrollbar_states.values_mut() {
+                    if state.should_auto_fade() && !state.should_fade {
+                        state.should_fade = true;
+                    }
+                }
+            }
+            
             _ => {
                 // 处理其他消息
             }
@@ -271,5 +372,18 @@ impl AppState {
     /// 获取下载错误（临时实现）
     pub fn download_errors(&self) -> HashMap<String, String> {
         HashMap::new()
+    }
+    
+    /// 获取滚动条状态
+    pub fn get_scrollbar_state(&self, id: &str) -> Option<&ScrollbarState> {
+        self.scrollbar_states.get(id)
+    }
+    
+    /// 获取滚动条透明度
+    pub fn get_scrollbar_alpha(&self, id: &str) -> f32 {
+        self.scrollbar_states
+            .get(id)
+            .map(|state| state.get_alpha())
+            .unwrap_or(0.4) // 默认透明度
     }
 }

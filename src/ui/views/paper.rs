@@ -6,7 +6,7 @@ use iced::Element;
 use crate::core::models::{ArxivPaper};
 use crate::core::app_state::ArxivManager;
 use crate::core::messages::Message;
-use crate::ui::style::{chat_container_dynamic_style, scrollable_style_dynamic};
+use crate::ui::style::{chat_container_dynamic_style, scrollable_tab_style_dynamic_with_fade, ultra_thin_vertical_scrollbar};
 
 pub struct PaperView;
 
@@ -70,7 +70,12 @@ impl PaperView {
                 .spacing(12.0 * scale)
                 .padding([24.0 * scale, 24.0 * scale])
             )
-            .style(scrollable_style_dynamic(&app.settings.theme))
+            .direction(ultra_thin_vertical_scrollbar())
+            .style(scrollable_tab_style_dynamic_with_fade(
+                &app.settings.theme, 
+                app.get_scrollbar_alpha("paper_view")
+            ))
+            .on_scroll(|_| Message::ScrollbarActivity("paper_view".to_string()))
         )
         .style(chat_container_dynamic_style(&app.settings.theme))
         .padding(16.0 * scale)

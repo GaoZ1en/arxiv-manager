@@ -4,9 +4,11 @@ pub mod paper;
 pub mod search;
 pub mod settings;
 pub mod ui;
+pub mod collection;
 
 // Re-export all public types for convenient access
 pub use paper::*;
 pub use search::*;
 pub use settings::*;
 pub use ui::*;
+pub use collection::*;
