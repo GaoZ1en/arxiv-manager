@@ -101,6 +101,12 @@ impl Sidebar {
                     })
                     .style(sidebar_item_style_dynamic(&app.settings.theme))
                     .padding(4.0 * app.current_scale()),
+
+                // AI 助手按钮
+                button(text("🤖 AI Assistant").color(theme_colors.text_muted).size(base_font_size * 0.86).font(current_font))
+                    .on_press(Message::ToggleAiAssistant)
+                    .style(sidebar_item_style_dynamic(&app.settings.theme))
+                    .padding(4.0 * app.current_scale()),
             ]
             .spacing(4.0 * app.current_scale()) // 按钮之间的间距
             .align_y(Alignment::Center) // 垂直居中对齐

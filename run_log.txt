@@ -1,0 +1,125 @@
+   Compiling async-openai v0.27.2
+   Compiling tantivy v0.22.0
+   Compiling arxiv-manager v0.1.0 (/home/koishi/Documents/rust/arxiv_manager)
+warning: unused import: `async_trait::async_trait`
+ --> src/ai/ai_assistant.rs:4:5
+  |
+4 | use async_trait::async_trait;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Datelike`
+ --> src/ai/ai_assistant.rs:5:19
+  |
+5 | use chrono::{Utc, Datelike};
+  |                   ^^^^^^^^
+
+warning: unused imports: `DateTime` and `Utc`
+ --> src/ai/ai_analyzer.rs:5:14
+  |
+5 | use chrono::{DateTime, Utc};
+  |              ^^^^^^^^  ^^^
+
+warning: unused import: `async_trait::async_trait`
+ --> src/ai/ai_handler.rs:4:5
+  |
+4 | use async_trait::async_trait;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0283]: type annotations needed
+   --> src/ui/components/ai_assistant_panel_simple.rs:48:26
+    |
+48  |                 text("").into()
+    |                 -------- ^^^^
+    |                 |
+    |                 type must be known at this point
+    |
+    = note: cannot satisfy `_: iced::widget::text::Catalog`
+    = help: the trait `iced::widget::text::Catalog` is implemented for `iced::Theme`
+note: required by a bound in `iced::widget::text`
+   --> /home/koishi/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/iced_widget-0.13.4/src/helpers.rs:907:12
+    |
+903 | pub fn text<'a, Theme, Renderer>(
+    |        ---- required by a bound in this function
+...
+907 |     Theme: text::Catalog + 'a,
+    |            ^^^^^^^^^^^^^ required by this bound in `text`
+help: try using a fully qualified path to specify the expected types
+    |
+48  -                 text("").into()
+48  +                 <iced::advanced::widget::Text<'_, Theme, Renderer> as Into<T>>::into(text(""))
+    |
+
+error[E0689]: can't call method `min` on ambiguous numeric type `{float}`
+   --> src/ai/ai_analyzer.rs:336:15
+    |
+336 |         score.min(1.0_f32)
+    |               ^^^
+    |
+help: you must specify a type for this binding, like `f32`
+    |
+317 |         let mut score: f32 = 0.0;
+    |                      +++++
+
+error[E0689]: can't call method `min` on ambiguous numeric type `{float}`
+   --> src/ai/ai_analyzer.rs:357:16
+    |
+357 |         impact.min(1.0)
+    |                ^^^
+    |
+help: you must specify a type for this binding, like `f32`
+    |
+340 |         let mut impact: f32 = 0.5; // Base impact score
+    |                       +++++
+
+error[E0521]: borrowed data escapes outside of method
+   --> src/core/app_state.rs:960:17
+    |
+948 |       pub fn handle_ai_message(&mut self, ai_message: AiMessage) -> Task<Message> {
+    |                                ---------
+    |                                |
+    |                                `self` is a reference that is only valid in the method body
+    |                                let's call the lifetime of this reference `'1`
+...
+960 | /                 Task::perform(
+961 | |                     async move {
+962 | |                         assistant.chat(message).await
+963 | |                     },
+...   |
+968 | |                 )
+    | |                 ^
+    | |                 |
+    | |_________________`self` escapes the method body here
+    |                   argument requires that `'1` must outlive `'static`
+
+warning: unused variable: `paper`
+   --> src/ai/ai_assistant.rs:322:34
+    |
+322 |     fn extract_key_points(&self, paper: &ArxivPaper) -> Vec<String> {
+    |                                  ^^^^^ help: if this is intentional, prefix it with an underscore: `_paper`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `paper`
+   --> src/ai/ai_assistant.rs:355:38
+    |
+355 |     fn extract_related_topics(&self, paper: &ArxivPaper) -> Vec<String> {
+    |                                      ^^^^^ help: if this is intentional, prefix it with an underscore: `_paper`
+
+warning: unused variable: `cs_terms`
+   --> src/ai/ai_suggestions.rs:211:13
+    |
+211 |         let cs_terms = ["computer science", "algorithm", "computational"];
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cs_terms`
+
+warning: unused variable: `math_terms`
+   --> src/ai/ai_suggestions.rs:212:13
+    |
+212 |         let math_terms = ["mathematical", "statistics", "optimization"];
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_math_terms`
+
+Some errors have detailed explanations: E0283, E0521, E0689.
+For more information about an error, try `rustc --explain E0283`.
+warning: `arxiv-manager` (lib) generated 8 warnings
+error: could not compile `arxiv-manager` (lib) due to 4 previous errors; 8 warnings emitted

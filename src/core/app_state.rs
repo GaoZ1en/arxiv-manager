@@ -7,6 +7,7 @@ use iced::{Task, Subscription};
 
 use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent, SessionManager, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
 use crate::core::messages::{Message, Command};
+use crate::ai::{AiState, AiMessage};
 
 // 导入所有处理器
 use crate::core::handlers::{
@@ -168,6 +169,8 @@ pub struct ArxivManager {
     pub window_height: f32,
     // 滚动条状态管理
     pub scrollbar_states: HashMap<String, ScrollbarState>,
+    // AI Assistant状态
+    pub ai_state: AiState,
 }
 
 impl ArxivManager {
@@ -261,6 +264,8 @@ impl ArxivManager {
             window_height: 900.0,
             // 滚动条状态管理初始化
             scrollbar_states: HashMap::new(),
+            // AI Assistant状态初始化
+            ai_state: AiState::new(),
         };
 
         // 确保标签页按分组排序
@@ -483,6 +488,15 @@ impl ArxivManager {
                         state.should_fade = true;
                     }
                 }
+                Task::none()
+            },
+
+            // AI Assistant 消息 - 委托给 AI 处理器
+            Message::Ai(ai_message) => self.handle_ai_message(ai_message),
+
+            // Toggle AI Assistant panel
+            Message::ToggleAiAssistant => {
+                self.ai_state.toggle_visibility();
                 Task::none()
             },
 
@@ -928,6 +942,145 @@ impl ArxivManager {
             .get(id)
             .map(|state| state.get_alpha())
             .unwrap_or(0.4) // 默认透明度
+    }
+
+    /// 处理AI消息
+    pub fn handle_ai_message(&mut self, ai_message: AiMessage) -> Task<Message> {
+        match ai_message {
+            AiMessage::StartChatSession => {
+                let session_id = self.ai_state.assistant.start_session();
+                self.ai_state.active_session_id = Some(session_id);
+                self.ai_state.chat_messages = self.ai_state.assistant.get_chat_history().to_vec();
+                Task::none()
+            },
+            AiMessage::SendChatMessage(message) => {
+                // Store the message in chat history immediately
+                use crate::ai::{AiChatMessage, MessageRole};
+                self.ai_state.chat_messages.push(AiChatMessage {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    role: MessageRole::User,
+                    content: message.clone(),
+                    timestamp: chrono::Utc::now(),
+                    paper_context: None,
+                });
+                
+                // For now, simulate AI response - later can be replaced with real AI service
+                let response = format!("I received your message: '{}'", message);
+                Task::done(Message::Ai(AiMessage::ChatResponseReceived(Ok(response))))
+            },
+            AiMessage::ChatResponseReceived(result) => {
+                match result {
+                    Ok(response) => {
+                        // Add AI response to chat history
+                        use crate::ai::{AiChatMessage, MessageRole};
+                        self.ai_state.chat_messages.push(AiChatMessage {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            role: MessageRole::Assistant,
+                            content: response,
+                            timestamp: chrono::Utc::now(),
+                            paper_context: None,
+                        });
+                        self.ai_state.is_generating = false;
+                    },
+                    Err(error) => {
+                        log::error!("AI chat error: {}", error);
+                        self.ai_state.is_generating = false;
+                    }
+                }
+                Task::none()
+            },
+            AiMessage::ClearChatHistory => {
+                self.ai_state.clear_chat_history();
+                Task::none()
+            },
+            AiMessage::GenerateSuggestions => {
+                self.ai_state.generate_suggestions();
+                Task::none()
+            },
+            AiMessage::SuggestionsGenerated(suggestions) => {
+                self.ai_state.current_suggestions = suggestions;
+                Task::none()
+            },
+            AiMessage::ApplySuggestion(suggestion_id) => {
+                if let Some(action) = self.ai_state.apply_suggestion(&suggestion_id) {
+                    return Task::done(Message::Ai(action));
+                }
+                Task::none()
+            },
+            AiMessage::RateSuggestion { id: _id, rating: _rating } => {
+                // TODO: Implement suggestion rating
+                Task::none()
+            },
+            AiMessage::AnalyzePaper(paper) => {
+                let analysis = self.ai_state.analyze_paper(&paper);
+                Task::done(Message::Ai(AiMessage::AnalysisCompleted(analysis)))
+            },
+            AiMessage::AnalysisCompleted(analysis) => {
+                self.ai_state.analysis_results.insert(analysis.paper_id.clone(), analysis);
+                Task::none()
+            },
+            AiMessage::AnalyzeSelectedPapers => {
+                // Analyze all papers in the current context
+                let papers = self.ai_state.assistant.get_context().selected_papers.clone();
+                let analyses: Vec<_> = papers.iter()
+                    .map(|paper| self.ai_state.analyze_paper(paper))
+                    .collect();
+                
+                for analysis in analyses {
+                    self.ai_state.analysis_results.insert(analysis.paper_id.clone(), analysis);
+                }
+                Task::none()
+            },
+            AiMessage::AddPaperToContext(paper) => {
+                self.ai_state.add_paper_to_context(paper);
+                Task::none()
+            },
+            AiMessage::RemovePaperFromContext(paper_id) => {
+                self.ai_state.remove_paper_from_context(&paper_id);
+                Task::none()
+            },
+            AiMessage::UpdateSearchContext(search_query) => {
+                self.ai_state.update_search_context(search_query.clone());
+                // Also update the main search query if needed
+                self.search_query = search_query;
+                Task::none()
+            },
+            AiMessage::AddResearchGoal(goal) => {
+                self.ai_state.assistant.add_research_goal(goal);
+                Task::none()
+            },
+            AiMessage::UpdateAiPreferences(preferences) => {
+                self.ai_state.update_preferences(preferences);
+                Task::none()
+            },
+            AiMessage::ToggleAiAssistant => {
+                self.ai_state.toggle_visibility();
+                Task::done(Message::Ai(AiMessage::AiAssistantVisibilityChanged(self.ai_state.is_visible)))
+            },
+            AiMessage::AiAssistantVisibilityChanged(_visible) => {
+                // This is just a notification, no action needed
+                Task::none()
+            },
+            AiMessage::GenerateCodeForPaper(paper_id) => {
+                if let Some(code) = self.ai_state.generate_code_for_paper(&paper_id) {
+                    Task::done(Message::Ai(AiMessage::CodeGenerated { paper_id, code }))
+                } else {
+                    Task::none()
+                }
+            },
+            AiMessage::CodeGenerated { paper_id: _paper_id, code: _code } => {
+                // Code has been generated and stored, UI can access it
+                Task::none()
+            },
+            AiMessage::GenerateResearchInsights => {
+                let context_summary = self.ai_state.get_context_summary();
+                Task::done(Message::Ai(AiMessage::ResearchInsightsGenerated(context_summary)))
+            },
+            AiMessage::ResearchInsightsGenerated(_insights) => {
+                // Insights have been generated, UI can display them
+                Task::none()
+            },
+        }
     }
 }
 
