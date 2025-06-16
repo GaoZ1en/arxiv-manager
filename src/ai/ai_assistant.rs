@@ -1,12 +1,12 @@
 // AI Assistant Core Engine
 // Main AI assistant functionality inspired by GitHub Copilot
 
-use async_trait::async_trait;
-use chrono::{Utc, Datelike};
+use chrono::Utc;
 use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::ai::ai_models::*;
+use crate::ai::ai_service::AiService;
 use crate::core::models::ArxivPaper;
 use crate::utils::Result;
 
@@ -16,6 +16,7 @@ pub struct AiAssistant {
     suggestions_cache: HashMap<String, Vec<AiSuggestion>>,
     chat_history: Vec<AiChatMessage>,
     active_session_id: Option<String>,
+    ai_service: AiService,
 }
 
 impl AiAssistant {
@@ -30,6 +31,7 @@ impl AiAssistant {
             suggestions_cache: HashMap::new(),
             chat_history: Vec::new(),
             active_session_id: None,
+            ai_service: AiService::new(),
         }
     }
 
@@ -67,20 +69,26 @@ impl AiAssistant {
         }
     }
 
-    pub fn generate_suggestions(&mut self) -> Vec<AiSuggestion> {
+    pub async fn generate_suggestions(&mut self) -> Vec<AiSuggestion> {
         let cache_key = self.generate_cache_key();
         
         if let Some(cached) = self.suggestions_cache.get(&cache_key) {
             return cached.clone();
         }
 
-        let mut suggestions = Vec::new();
-
-        // Generate different types of suggestions based on context
-        suggestions.extend(self.generate_search_suggestions());
-        suggestions.extend(self.generate_related_paper_suggestions());
-        suggestions.extend(self.generate_code_suggestions());
-        suggestions.extend(self.generate_trend_suggestions());
+        // Try to use AI service for intelligent suggestions
+        let suggestions = match self.ai_service.generate_suggestions(&self.context).await {
+            Ok(ai_suggestions) => ai_suggestions,
+            Err(_) => {
+                // Fallback to rule-based suggestions if AI fails
+                let mut fallback = Vec::new();
+                fallback.extend(self.generate_search_suggestions());
+                fallback.extend(self.generate_related_paper_suggestions());
+                fallback.extend(self.generate_code_suggestions());
+                fallback.extend(self.generate_trend_suggestions());
+                fallback
+            }
+        };
 
         // Cache the suggestions
         self.suggestions_cache.insert(cache_key, suggestions.clone());
@@ -123,18 +131,31 @@ impl AiAssistant {
         self.chat_history.clear();
     }
 
-    pub fn analyze_paper(&self, paper: &ArxivPaper) -> AiAnalysisResult {
-        AiAnalysisResult {
-            paper_id: paper.id.clone(),
-            summary: self.generate_paper_summary(paper),
-            key_points: self.extract_key_points(paper),
-            methodology: self.extract_methodology(paper),
-            code_availability: self.detect_code_availability(paper),
-            dataset_info: self.extract_dataset_info(paper),
-            related_topics: self.extract_related_topics(paper),
-            complexity_score: self.calculate_complexity_score(paper),
-            research_impact: self.estimate_research_impact(paper),
+    pub async fn analyze_paper(&self, paper: &ArxivPaper) -> AiAnalysisResult {
+        // Try to use AI service for intelligent analysis
+        match self.ai_service.analyze_paper(paper).await {
+            Ok(analysis) => analysis,
+            Err(_) => {
+                // Fallback to rule-based analysis
+                AiAnalysisResult {
+                    paper_id: paper.id.clone(),
+                    summary: self.generate_paper_summary(paper),
+                    key_points: self.extract_key_points(paper),
+                    methodology: self.extract_methodology(paper),
+                    code_availability: self.detect_code_availability(paper),
+                    dataset_info: self.extract_dataset_info(paper),
+                    related_topics: self.extract_related_topics(paper),
+                    complexity_score: self.calculate_complexity_score(paper),
+                    research_impact: self.estimate_research_impact(paper),
+                }
+            }
         }
+    }
+
+    pub async fn generate_code_example(&self, paper: &ArxivPaper, language: &str) -> crate::utils::Result<String> {
+        // Use AI service to generate intelligent code examples
+        self.ai_service.generate_code_example(paper, language).await
+            .map_err(|e| crate::utils::ArxivError::Xml(e.to_string()))
     }
 
     pub fn suggest_citations(&self, paper: &ArxivPaper) -> Vec<String> {
@@ -271,21 +292,10 @@ impl AiAssistant {
         suggestions
     }
 
-    async fn generate_chat_response(&self, user_message: &str) -> Result<String> {
-        // This is a simplified response generator
-        // In a real implementation, you would integrate with an AI service like OpenAI
-        
-        let response = if user_message.to_lowercase().contains("summary") {
-            self.generate_context_summary()
-        } else if user_message.to_lowercase().contains("code") {
-            "I can help you generate code examples. Please select a paper you'd like to implement.".to_string()
-        } else if user_message.to_lowercase().contains("search") {
-            "I can suggest better search queries. What specific topic are you researching?".to_string()
-        } else {
-            "I'm here to help with your research! You can ask me about paper summaries, code examples, or search suggestions.".to_string()
-        };
-
-        Ok(response)
+    async fn generate_chat_response(&self, user_message: &str) -> crate::utils::Result<String> {
+        // Use the real AI service for intelligent responses
+        self.ai_service.generate_chat_response(user_message, &self.chat_history, &self.context).await
+            .map_err(|e| crate::utils::ArxivError::Xml(e.to_string()))
     }
 
     fn generate_context_summary(&self) -> String {
@@ -319,7 +329,7 @@ impl AiAssistant {
         )
     }
 
-    fn extract_key_points(&self, paper: &ArxivPaper) -> Vec<String> {
+    fn extract_key_points(&self, _paper: &ArxivPaper) -> Vec<String> {
         // Simplified key point extraction
         vec![
             "Novel methodology presented".to_string(),
@@ -352,7 +362,7 @@ impl AiAssistant {
         }
     }
 
-    fn extract_related_topics(&self, paper: &ArxivPaper) -> Vec<String> {
+    fn extract_related_topics(&self, _paper: &ArxivPaper) -> Vec<String> {
         // Simplified topic extraction
         vec!["Machine Learning".to_string(), "Deep Learning".to_string()]
     }

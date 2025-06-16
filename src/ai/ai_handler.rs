@@ -1,7 +1,6 @@
 // AI Handler - Message processing and state management for AI features
 // Integrates AI capabilities into the main application flow
 
-use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::ai::{AiAssistant, AiSuggestion, AiAnalysisResult, AiChatMessage, AiUserPreferences};
@@ -12,6 +11,7 @@ use crate::utils::Result;
 pub enum AiMessage {
     // Chat interactions
     StartChatSession,
+    UpdateChatInput(String),  // 新增：更新输入内容，不发送消息
     SendChatMessage(String),
     ChatResponseReceived(std::result::Result<String, String>),
     ClearChatHistory,
@@ -44,21 +44,54 @@ pub enum AiMessage {
     GenerateCodeForPaper(String), // paper_id
     CodeGenerated { paper_id: String, code: String },
     
-    // Research insights
-    GenerateResearchInsights,
-    ResearchInsightsGenerated(String),
+    // Smart suggestions and Copilot-like features
+    GenerateInputSuggestions(String), // 根据输入生成建议
+    InputSuggestionsGenerated(Vec<String>), // 生成的输入建议
+    ApplyInputSuggestion(String), // 应用输入建议
+    
+    // Copilot-like intelligent assistance
+    GenerateSmartCompletion(String), // 智能补全
+    SmartCompletionGenerated(String), // 生成的智能补全
+    
+    // Research workflow assistance
+    GenerateWorkflowSuggestions, // 生成工作流建议
+    WorkflowSuggestionsGenerated(Vec<AiSuggestion>), // 工作流建议
+    
+    // Research insights generation
+    GenerateResearchInsights, // 生成研究洞察
+    ResearchInsightsGenerated(Vec<String>), // 研究洞察结果
+    
+    // GitHub Copilot Integration
+    InitializeCopilot, // 初始化 GitHub Copilot
+    CopilotInitialized(std::result::Result<(), String>), // Copilot 初始化结果
+    CopilotAuthStatus(crate::ai::CopilotAuth), // Copilot 认证状态
+    OpenDocumentInCopilot { uri: String, content: String, language: String }, // 在 Copilot 中打开文档
+    UpdateDocumentInCopilot { content: String, version: i32 }, // 更新 Copilot 文档
+    GetCopilotCompletions(lsp_types::Position), // 获取 Copilot 补全
+    GetCopilotInlineCompletions(lsp_types::Position), // 获取 Copilot 内联补全
+    CopilotCompletionsReceived(Vec<crate::ai::CopilotSuggestion>), // Copilot 补全结果
+    ApplyCopilotSuggestion(String), // 应用 Copilot 建议
+    CopilotSignIn, // Copilot 登录
+    CopilotSignOut, // Copilot 登出
 }
 
 #[derive(Debug, Clone)]
 pub struct AiState {
     pub assistant: AiAssistant,
     pub is_visible: bool,
+    pub current_input: String,  // 新增：当前输入的文本
     pub current_suggestions: Vec<AiSuggestion>,
     pub chat_messages: Vec<AiChatMessage>,
     pub analysis_results: HashMap<String, AiAnalysisResult>,
     pub is_generating: bool,
     pub active_session_id: Option<String>,
     pub generated_code: HashMap<String, String>, // paper_id -> code
+    
+    // GitHub Copilot integration
+    pub copilot_suggestions: Vec<crate::ai::CopilotSuggestion>,
+    pub copilot_auth_status: Option<crate::ai::CopilotAuth>,
+    pub copilot_enabled: bool,
+    pub current_document_version: i32,
 }
 
 impl AiState {
@@ -66,12 +99,19 @@ impl AiState {
         Self {
             assistant: AiAssistant::new(),
             is_visible: false,
+            current_input: String::new(),  // 初始化为空字符串
             current_suggestions: Vec::new(),
             chat_messages: Vec::new(),
             analysis_results: HashMap::new(),
             is_generating: false,
             active_session_id: None,
             generated_code: HashMap::new(),
+            
+            // GitHub Copilot fields
+            copilot_suggestions: Vec::new(),
+            copilot_auth_status: None,
+            copilot_enabled: false,
+            current_document_version: 0,
         }
     }
 
@@ -82,20 +122,27 @@ impl AiState {
         }
     }
 
+    pub fn update_input(&mut self, input: String) {
+        self.current_input = input;
+    }
+
+    pub fn clear_input(&mut self) {
+        self.current_input.clear();
+    }
+
     pub fn add_paper_to_context(&mut self, paper: ArxivPaper) {
         self.assistant.add_paper_to_context(paper);
-        // Regenerate suggestions when context changes
-        self.current_suggestions = self.assistant.generate_suggestions();
+        // Note: suggestions will be regenerated async when needed
     }
 
     pub fn remove_paper_from_context(&mut self, paper_id: &str) {
         self.assistant.remove_paper_from_context(paper_id);
-        self.current_suggestions = self.assistant.generate_suggestions();
+        // Note: suggestions will be regenerated async when needed
     }
 
     pub fn update_search_context(&mut self, search_query: String) {
         self.assistant.update_search_context(search_query);
-        self.current_suggestions = self.assistant.generate_suggestions();
+        // Note: suggestions will be regenerated async when needed
     }
 
     pub async fn send_chat_message(&mut self, message: String) -> Result<String> {
@@ -109,12 +156,14 @@ impl AiState {
         response
     }
 
-    pub fn generate_suggestions(&mut self) {
-        self.current_suggestions = self.assistant.generate_suggestions();
+    pub async fn generate_suggestions(&mut self) {
+        match self.assistant.generate_suggestions().await {
+            suggestions => self.current_suggestions = suggestions,
+        }
     }
 
-    pub fn analyze_paper(&mut self, paper: &ArxivPaper) -> AiAnalysisResult {
-        let analysis = self.assistant.analyze_paper(paper);
+    pub async fn analyze_paper(&mut self, paper: &ArxivPaper) -> AiAnalysisResult {
+        let analysis = self.assistant.analyze_paper(paper).await;
         self.analysis_results.insert(paper.id.clone(), analysis.clone());
         analysis
     }
@@ -139,11 +188,19 @@ impl AiState {
         }
     }
 
-    pub fn generate_code_for_paper(&mut self, paper_id: &str) -> Option<String> {
-        // This would typically call an AI service to generate code
-        // For now, we'll return a template
-        let code = format!(
-            r#"# Implementation for paper: {}
+    pub async fn generate_code_for_paper(&mut self, paper_id: &str) -> Option<String> {
+        // Find the paper in context
+        if let Some(paper) = self.assistant.get_context().selected_papers.iter().find(|p| p.id == paper_id) {
+            // Generate code using AI service
+            match self.assistant.generate_code_example(paper, "python").await {
+                Ok(code) => {
+                    self.generated_code.insert(paper_id.to_string(), code.clone());
+                    Some(code)
+                },
+                Err(_) => {
+                    // Fallback code generation
+                    let fallback_code = format!(
+                        r#"# Implementation for paper: {}
 # This is an AI-generated code template
 
 import numpy as np
@@ -172,11 +229,15 @@ if __name__ == "__main__":
     # Add your implementation here
     print("Implementation ready!")
 "#,
-            paper_id
-        );
-        
-        self.generated_code.insert(paper_id.to_string(), code.clone());
-        Some(code)
+                        paper.title
+                    );
+                    self.generated_code.insert(paper_id.to_string(), fallback_code.clone());
+                    Some(fallback_code)
+                }
+            }
+        } else {
+            None
+        }
     }
 
     pub fn clear_chat_history(&mut self) {
@@ -186,8 +247,7 @@ if __name__ == "__main__":
 
     pub fn update_preferences(&mut self, preferences: AiUserPreferences) {
         self.assistant.update_preferences(preferences);
-        // Regenerate suggestions with new preferences
-        self.current_suggestions = self.assistant.generate_suggestions();
+        // Note: suggestions will be regenerated async when needed
     }
 
     pub fn get_context_summary(&self) -> String {

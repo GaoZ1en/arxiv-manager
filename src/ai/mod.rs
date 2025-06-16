@@ -6,9 +6,13 @@ pub mod ai_models;
 pub mod ai_suggestions;
 pub mod ai_analyzer;
 pub mod ai_handler;
+pub mod ai_service;
+pub mod copilot_integration;
 
 pub use ai_assistant::*;
 pub use ai_models::*;
 pub use ai_suggestions::*;
 pub use ai_analyzer::*;
 pub use ai_handler::*;
+pub use ai_service::*;
+pub use copilot_integration::*;

@@ -146,6 +146,7 @@ pub enum Message {
     // AI Assistant messages
     Ai(AiMessage),
     ToggleAiAssistant, // Toggle AI Assistant panel visibility
+    ChangeAiPanelTab(crate::ui::components::ai_assistant_panel_simple::AiPanelTab), // Switch AI panel tabs
 }
 
 #[derive(Debug, Clone)]

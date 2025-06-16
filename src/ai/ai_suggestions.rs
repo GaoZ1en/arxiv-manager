@@ -208,8 +208,8 @@ impl AiSuggestionsEngine {
         
         // Add domain-specific expansions
         let ml_terms = ["machine learning", "deep learning", "neural networks", "AI"];
-        let cs_terms = ["computer science", "algorithm", "computational"];
-        let math_terms = ["mathematical", "statistics", "optimization"];
+        let _cs_terms = ["computer science", "algorithm", "computational"];
+        let _math_terms = ["mathematical", "statistics", "optimization"];
         
         for &term in &ml_terms {
             if !query.to_lowercase().contains(term) {

@@ -153,8 +153,10 @@ impl ArxivManager {
             row![
                 main_layout,
                 AiAssistantPanel::view(
+                    self,
                     &self.ai_state.chat_messages,
-                    &self.ai_state.current_suggestions
+                    &self.ai_state.current_suggestions,
+                    self.ai_state.is_generating
                 )
             ]
             .spacing(0)

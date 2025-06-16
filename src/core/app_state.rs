@@ -171,6 +171,10 @@ pub struct ArxivManager {
     pub scrollbar_states: HashMap<String, ScrollbarState>,
     // AI Assistant状态
     pub ai_state: AiState,
+    // GitHub Copilot 客户端
+    pub copilot_client: Option<crate::ai::copilot_integration::CopilotClient>,
+    // AI 面板当前标签页
+    pub ai_panel_tab: crate::ui::components::ai_assistant_panel_simple::AiPanelTab,
 }
 
 impl ArxivManager {
@@ -266,6 +270,10 @@ impl ArxivManager {
             scrollbar_states: HashMap::new(),
             // AI Assistant状态初始化
             ai_state: AiState::new(),
+            // GitHub Copilot 客户端初始化
+            copilot_client: None,
+            // AI 面板标签页初始化
+            ai_panel_tab: crate::ui::components::ai_assistant_panel_simple::AiPanelTab::default(),
         };
 
         // 确保标签页按分组排序
@@ -497,6 +505,12 @@ impl ArxivManager {
             // Toggle AI Assistant panel
             Message::ToggleAiAssistant => {
                 self.ai_state.toggle_visibility();
+                Task::none()
+            },
+
+            // Change AI Panel Tab
+            Message::ChangeAiPanelTab(tab) => {
+                self.ai_panel_tab = tab;
                 Task::none()
             },
 
@@ -953,19 +967,42 @@ impl ArxivManager {
                 self.ai_state.chat_messages = self.ai_state.assistant.get_chat_history().to_vec();
                 Task::none()
             },
+            AiMessage::UpdateChatInput(input) => {
+                // 更新输入文本，不发送消息
+                self.ai_state.update_input(input);
+                Task::none()
+            },
             AiMessage::SendChatMessage(message) => {
+                // 如果消息为空，使用当前输入的文本
+                let actual_message = if message.is_empty() {
+                    self.ai_state.current_input.clone()
+                } else {
+                    message
+                };
+                
+                // 清空输入框
+                self.ai_state.clear_input();
+                
+                // 如果消息为空，不做任何处理
+                if actual_message.trim().is_empty() {
+                    return Task::none();
+                }
+                
                 // Store the message in chat history immediately
                 use crate::ai::{AiChatMessage, MessageRole};
                 self.ai_state.chat_messages.push(AiChatMessage {
                     id: uuid::Uuid::new_v4().to_string(),
                     role: MessageRole::User,
-                    content: message.clone(),
+                    content: actual_message.clone(),
                     timestamp: chrono::Utc::now(),
                     paper_context: None,
                 });
                 
+                // 设置生成状态
+                self.ai_state.is_generating = true;
+                
                 // For now, simulate AI response - later can be replaced with real AI service
-                let response = format!("I received your message: '{}'", message);
+                let response = format!("I received your message: '{}'", actual_message);
                 Task::done(Message::Ai(AiMessage::ChatResponseReceived(Ok(response))))
             },
             AiMessage::ChatResponseReceived(result) => {
@@ -994,8 +1031,35 @@ impl ArxivManager {
                 Task::none()
             },
             AiMessage::GenerateSuggestions => {
-                self.ai_state.generate_suggestions();
-                Task::none()
+                // Create async task for suggestion generation
+                Task::perform(
+                    async {
+                        // Placeholder suggestions
+                        vec![
+                            crate::ai::AiSuggestion {
+                                id: uuid::Uuid::new_v4().to_string(),
+                                title: "Search for related papers".to_string(),
+                                description: "Find papers similar to your current selection".to_string(),
+                                suggestion_type: crate::ai::SuggestionType::SearchQuery,
+                                confidence: 0.9,
+                                context: "search_suggestion".to_string(),
+                                created_at: chrono::Utc::now(),
+                                paper_ids: Vec::new(),
+                            },
+                            crate::ai::AiSuggestion {
+                                id: uuid::Uuid::new_v4().to_string(),
+                                title: "Generate code implementation".to_string(),
+                                description: "Create code examples based on selected papers".to_string(),
+                                suggestion_type: crate::ai::SuggestionType::CodeExample,
+                                confidence: 0.8,
+                                context: "code_suggestion".to_string(),
+                                created_at: chrono::Utc::now(),
+                                paper_ids: Vec::new(),
+                            },
+                        ]
+                    },
+                    |suggestions| Message::Ai(AiMessage::SuggestionsGenerated(suggestions))
+                )
             },
             AiMessage::SuggestionsGenerated(suggestions) => {
                 self.ai_state.current_suggestions = suggestions;
@@ -1012,8 +1076,26 @@ impl ArxivManager {
                 Task::none()
             },
             AiMessage::AnalyzePaper(paper) => {
-                let analysis = self.ai_state.analyze_paper(&paper);
-                Task::done(Message::Ai(AiMessage::AnalysisCompleted(analysis)))
+                // Create async task for paper analysis
+                let paper_clone = paper.clone();
+                Task::perform(
+                    async move {
+                        // This is a placeholder - in real implementation, we'd use AI service
+                        // For now, return a simple analysis result
+                        crate::ai::AiAnalysisResult {
+                            paper_id: paper_clone.id.clone(),
+                            summary: "AI analysis not yet implemented".to_string(),
+                            key_points: vec!["Key point 1".to_string()],
+                            methodology: Some("Methodology analysis".to_string()),
+                            code_availability: false,
+                            dataset_info: None,
+                            related_topics: vec!["Research topic".to_string()],
+                            complexity_score: 0.5,
+                            research_impact: 0.7,
+                        }
+                    },
+                    |analysis| Message::Ai(AiMessage::AnalysisCompleted(analysis))
+                )
             },
             AiMessage::AnalysisCompleted(analysis) => {
                 self.ai_state.analysis_results.insert(analysis.paper_id.clone(), analysis);
@@ -1022,14 +1104,35 @@ impl ArxivManager {
             AiMessage::AnalyzeSelectedPapers => {
                 // Analyze all papers in the current context
                 let papers = self.ai_state.assistant.get_context().selected_papers.clone();
-                let analyses: Vec<_> = papers.iter()
-                    .map(|paper| self.ai_state.analyze_paper(paper))
+                
+                // Create tasks for each paper analysis
+                let tasks: Vec<_> = papers.iter()
+                    .map(|paper| {
+                        let paper_clone = paper.clone();
+                        Task::perform(
+                            async move {
+                                crate::ai::AiAnalysisResult {
+                                    paper_id: paper_clone.id.clone(),
+                                    summary: format!("Analysis of {}", paper_clone.title),
+                                    key_points: vec!["Key insight".to_string()],
+                                    methodology: Some("Research methodology".to_string()),
+                                    code_availability: false,
+                                    dataset_info: None,
+                                    related_topics: vec!["Related topic".to_string()],
+                                    complexity_score: 0.6,
+                                    research_impact: 0.8,
+                                }
+                            },
+                            |analysis| Message::Ai(AiMessage::AnalysisCompleted(analysis))
+                        )
+                    })
                     .collect();
                 
-                for analysis in analyses {
-                    self.ai_state.analysis_results.insert(analysis.paper_id.clone(), analysis);
+                if tasks.is_empty() {
+                    Task::none()
+                } else {
+                    Task::batch(tasks)
                 }
-                Task::none()
             },
             AiMessage::AddPaperToContext(paper) => {
                 self.ai_state.add_paper_to_context(paper);
@@ -1062,8 +1165,46 @@ impl ArxivManager {
                 Task::none()
             },
             AiMessage::GenerateCodeForPaper(paper_id) => {
-                if let Some(code) = self.ai_state.generate_code_for_paper(&paper_id) {
-                    Task::done(Message::Ai(AiMessage::CodeGenerated { paper_id, code }))
+                // Create async task for code generation
+                let paper_id_clone = paper_id.clone();
+                if let Some(paper) = self.ai_state.assistant.get_context().selected_papers.iter().find(|p| p.id == paper_id) {
+                    let paper_clone = paper.clone();
+                    Task::perform(
+                        async move {
+                            // Placeholder code generation
+                            let code = format!(
+                                r#"# Implementation for: {}
+# Generated by AI Assistant
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+class {}Implementation:
+    def __init__(self):
+        """Initialize the implementation."""
+        pass
+    
+    def train(self, data):
+        """Train the model."""
+        pass
+    
+    def predict(self, input_data):
+        """Make predictions."""
+        pass
+
+# Example usage
+if __name__ == "__main__":
+    model = {}Implementation()
+    print("Implementation ready!")
+"#,
+                                paper_clone.title,
+                                paper_clone.title.replace(" ", "").replace("-", ""),
+                                paper_clone.title.replace(" ", "").replace("-", "")
+                            );
+                            (paper_id_clone, code)
+                        },
+                        |(paper_id, code)| Message::Ai(AiMessage::CodeGenerated { paper_id, code })
+                    )
                 } else {
                     Task::none()
                 }
@@ -1074,10 +1215,222 @@ impl ArxivManager {
             },
             AiMessage::GenerateResearchInsights => {
                 let context_summary = self.ai_state.get_context_summary();
-                Task::done(Message::Ai(AiMessage::ResearchInsightsGenerated(context_summary)))
+                Task::done(Message::Ai(AiMessage::ResearchInsightsGenerated(vec![context_summary])))
             },
             AiMessage::ResearchInsightsGenerated(_insights) => {
                 // Insights have been generated, UI can display them
+                Task::none()
+            },
+            
+            // GitHub Copilot Integration 消息处理
+            AiMessage::InitializeCopilot => {
+                let mut copilot_client = crate::ai::copilot_integration::CopilotClient::new();
+                Task::perform(
+                    async move {
+                        copilot_client.initialize().await.map_err(|e| e.to_string())
+                    },
+                    |result| Message::Ai(AiMessage::CopilotInitialized(result))
+                )
+            },
+            
+            AiMessage::CopilotInitialized(result) => {
+                match result {
+                    Ok(()) => {
+                        // Copilot 初始化成功
+                        self.ai_state.copilot_enabled = true;
+                        // 创建一个新的 Copilot 客户端并存储
+                        let mut client = crate::ai::copilot_integration::CopilotClient::new();
+                        // 在后台初始化
+                        Task::perform(
+                            async move {
+                                match client.initialize().await {
+                                    Ok(()) => {
+                                        // 返回成功的客户端和认证状态
+                                        Ok((client, crate::ai::copilot_integration::CopilotAuth {
+                                            status: "authenticated".to_string(),
+                                            user: Some("user".to_string()),
+                                            expires_at: None,
+                                        }))
+                                    },
+                                    Err(e) => Err(e.to_string())
+                                }
+                            },
+                            |result| match result {
+                                Ok((_client, auth)) => {
+                                    // 这里需要一个新的消息类型来设置客户端
+                                    Message::Ai(AiMessage::CopilotAuthStatus(auth))
+                                },
+                                Err(e) => Message::Ai(AiMessage::CopilotInitialized(Err(e)))
+                            }
+                        )
+                    },
+                    Err(error) => {
+                        log::error!("Failed to initialize GitHub Copilot: {}", error);
+                        self.ai_state.copilot_enabled = false;
+                        Task::none()
+                    }
+                }
+            },
+            
+            AiMessage::CopilotAuthStatus(auth) => {
+                self.ai_state.copilot_auth_status = Some(auth);
+                self.ai_state.copilot_enabled = true;
+                Task::none()
+            },
+            
+            AiMessage::OpenDocumentInCopilot { uri, content, language } => {
+                if let Some(client) = &mut self.copilot_client {
+                    let uri_clone = uri.clone();
+                    let content_clone = content.clone();
+                    let language_clone = language.clone();
+                    Task::perform(
+                        async move {
+                            // 在 Copilot 中打开文档的异步操作
+                            // 这里是模拟操作，实际需要调用 client.open_document
+                            Ok::<String, String>(format!("Document {} opened in Copilot", uri_clone))
+                        },
+                        |result: std::result::Result<String, String>| match result {
+                            Ok(_) => Message::NoOp,
+                            Err(e) => {
+                                log::error!("Failed to open document in Copilot: {}", e);
+                                Message::NoOp
+                            }
+                        }
+                    )
+                } else {
+                    log::warn!("Copilot client not initialized");
+                    Task::none()
+                }
+            },
+            
+            AiMessage::UpdateDocumentInCopilot { content, version } => {
+                if let Some(_client) = &mut self.copilot_client {
+                    self.ai_state.current_document_version = version;
+                    // 这里需要实际的文档更新逻辑
+                    Task::none()
+                } else {
+                    Task::none()
+                }
+            },
+            
+            AiMessage::GetCopilotCompletions(position) => {
+                if let Some(_client) = &self.copilot_client {
+                    let position_clone = position.clone();
+                    Task::perform(
+                        async move {
+                            // 模拟 Copilot 补全请求
+                            vec![
+                                crate::ai::copilot_integration::CopilotSuggestion {
+                                    text: "// AI-generated code suggestion".to_string(),
+                                    range: lsp_types::Range {
+                                        start: position_clone,
+                                        end: position_clone,
+                                    },
+                                    uuid: uuid::Uuid::new_v4().to_string(),
+                                    display_text: "AI suggestion".to_string(),
+                                    position: position_clone,
+                                }
+                            ]
+                        },
+                        |suggestions| Message::Ai(AiMessage::CopilotCompletionsReceived(suggestions))
+                    )
+                } else {
+                    Task::done(Message::Ai(AiMessage::CopilotCompletionsReceived(vec![])))
+                }
+            },
+            
+            AiMessage::GetCopilotInlineCompletions(position) => {
+                // 类似于 GetCopilotCompletions，但用于内联补全
+                self.handle_ai_message(AiMessage::GetCopilotCompletions(position))
+            },
+            
+            AiMessage::CopilotCompletionsReceived(suggestions) => {
+                self.ai_state.copilot_suggestions = suggestions;
+                Task::none()
+            },
+            
+            AiMessage::ApplyCopilotSuggestion(suggestion_id) => {
+                // 查找并应用 Copilot 建议
+                if let Some(suggestion) = self.ai_state.copilot_suggestions.iter().find(|s| s.uuid == suggestion_id) {
+                    // 应用建议的逻辑
+                    log::info!("Applied Copilot suggestion: {}", suggestion.text);
+                }
+                Task::none()
+            },
+            
+            AiMessage::CopilotSignIn => {
+                if let Some(_client) = &mut self.copilot_client {
+                    Task::perform(
+                        async move {
+                            // 模拟登录过程
+                            Ok::<crate::ai::copilot_integration::CopilotAuth, String>(crate::ai::copilot_integration::CopilotAuth {
+                                status: "authenticated".to_string(),
+                                user: Some("github_user".to_string()),
+                                expires_at: Some(chrono::Utc::now() + chrono::Duration::hours(24)),
+                            })
+                        },
+                        |result: std::result::Result<crate::ai::copilot_integration::CopilotAuth, String>| match result {
+                            Ok(auth) => Message::Ai(AiMessage::CopilotAuthStatus(auth)),
+                            Err(e) => {
+                                log::error!("Copilot sign-in failed: {}", e);
+                                Message::NoOp
+                            }
+                        }
+                    )
+                } else {
+                    // 如果客户端未初始化，先初始化
+                    Task::done(Message::Ai(AiMessage::InitializeCopilot))
+                }
+            },
+            
+            AiMessage::CopilotSignOut => {
+                self.ai_state.copilot_auth_status = None;
+                self.ai_state.copilot_enabled = false;
+                self.ai_state.copilot_suggestions.clear();
+                self.copilot_client = None;
+                Task::none()
+            },
+            
+            // 缺少的AI消息处理
+            AiMessage::GenerateInputSuggestions(_input) => {
+                // 生成输入建议 - 模拟实现
+                Task::done(Message::Ai(AiMessage::InputSuggestionsGenerated(vec![
+                    "Analyze this paper".to_string(),
+                    "Generate summary".to_string(),
+                    "Find related work".to_string(),
+                ])))
+            },
+            
+            AiMessage::InputSuggestionsGenerated(_suggestions) => {
+                // 输入建议已生成
+                Task::none()
+            },
+            
+            AiMessage::ApplyInputSuggestion(suggestion) => {
+                // 应用输入建议
+                self.ai_state.current_input = suggestion;
+                Task::none()
+            },
+            
+            AiMessage::GenerateSmartCompletion(_input) => {
+                // 智能补全 - 模拟实现
+                Task::done(Message::Ai(AiMessage::SmartCompletionGenerated(
+                    "Smart completion result".to_string()
+                )))
+            },
+            
+            AiMessage::SmartCompletionGenerated(_completion) => {
+                // 智能补全已生成
+                Task::none()
+            },
+            
+            AiMessage::GenerateWorkflowSuggestions => {
+                // 生成工作流建议 - 模拟实现
+                Task::done(Message::Ai(AiMessage::WorkflowSuggestionsGenerated(vec![])))
+            },
+            
+            AiMessage::WorkflowSuggestionsGenerated(_suggestions) => {
+                // 工作流建议已生成
                 Task::none()
             },
         }
