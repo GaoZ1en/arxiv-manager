@@ -182,6 +182,7 @@ pub struct DownloadItem {
     pub progress: f32,
     pub status: DownloadStatus,
     pub file_path: Option<PathBuf>,
+    pub auto_open_after_download: bool, // 新增：下载完成后自动打开
 }
 
 #[derive(Debug, Clone)]

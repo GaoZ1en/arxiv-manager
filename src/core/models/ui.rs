@@ -60,6 +60,7 @@ pub enum TabContent {
     Downloads,
     Settings,
     PaperView(usize), // Index into saved_papers
+    PdfViewer(std::path::PathBuf), // PDF文件路径
 }
 
 impl Tab {
@@ -72,6 +73,7 @@ impl Tab {
             TabContent::Downloads => TabGroup::Downloads,
             TabContent::Settings => TabGroup::Default,
             TabContent::PaperView(_) => TabGroup::Research,
+            TabContent::PdfViewer(_) => TabGroup::Research,
         };
         
         Self {

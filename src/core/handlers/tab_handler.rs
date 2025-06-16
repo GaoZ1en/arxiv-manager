@@ -86,6 +86,13 @@ impl TabHandler for ArxivManager {
                     "Paper Detail".to_string()
                 }
             },
+            TabContent::PdfViewer(path) => {
+                if let Some(filename) = path.file_name() {
+                    format!("PDF: {}", filename.to_string_lossy())
+                } else {
+                    "PDF Viewer".to_string()
+                }
+            },
         };
         
         let new_tab = Tab::new(self.next_tab_id, title, content);

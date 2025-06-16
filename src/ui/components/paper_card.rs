@@ -74,29 +74,47 @@ impl PaperCard {
         })
         .into()
     }
-    
-    /// 创建Search视图的按钮 - Save和Download
+     /// 创建Search视图的按钮 - Save和Open PDF（常驻）
     fn create_search_buttons<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
         let theme_colors = app.theme_colors();
         let current_font = app.current_font();
         let base_font_size = app.current_font_size();
         let scale = app.current_scale();
         
-        row![
+        // 确定PDF按钮的文本
+        let pdf_button_text = if paper.local_file_path.is_some() {
+            "Open PDF"
+        } else {
+            "Download & Open PDF"
+        };
+        
+        let pdf_button = if paper.local_file_path.is_some() {
+            button(text(pdf_button_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::OpenOrDownloadPdf(paper.clone()))
+                .style(button_secondary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 8.0 * scale])
+        } else {
+            button(text(pdf_button_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::OpenOrDownloadPdf(paper.clone()))
+                .style(button_primary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 8.0 * scale])
+        };
+        
+        let buttons = vec![
             button(text("Save").color(Color::BLACK).size(base_font_size).font(current_font))
                 .on_press(Message::SavePaper(paper.clone()))
                 .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 8.0 * scale]),
-            button(text("Download").color(theme_colors.text_primary).size(base_font_size).font(current_font))
-                .on_press(Message::DownloadPaper(paper.clone()))
-                .style(button_secondary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 8.0 * scale]),
-        ]
+                .padding([8.0 * scale, 8.0 * scale])
+                .into(),
+            pdf_button.into(),
+        ];
+        
+        row(buttons)
         .spacing(8.0 * scale)
         .into()
     }
     
-    /// 创建Library视图的按钮 - Favorite、Remove、Download、View PDF和View
+    /// 创建Library视图的按钮 - Favorite、Remove、Open PDF（常驻）和View
     fn create_library_buttons<'a>(app: &'a ArxivManager, paper: &'a ArxivPaper) -> Element<'a, Message> {
         let theme_colors = app.theme_colors();
         let current_font = app.current_font();
@@ -110,7 +128,26 @@ impl PaperCard {
             button_primary_style_dynamic(&app.settings.theme) // 使用相同的样式函数
         };
         
-        let mut buttons = vec![
+        // 确定PDF按钮的文本
+        let pdf_button_text = if paper.local_file_path.is_some() {
+            "Open PDF"
+        } else {
+            "Download & Open PDF"
+        };
+        
+        let pdf_button = if paper.local_file_path.is_some() {
+            button(text(pdf_button_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::OpenOrDownloadPdf(paper.clone()))
+                .style(button_secondary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 8.0 * scale])
+        } else {
+            button(text(pdf_button_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
+                .on_press(Message::OpenOrDownloadPdf(paper.clone()))
+                .style(button_primary_style_dynamic(&app.settings.theme))
+                .padding([8.0 * scale, 8.0 * scale])
+        };
+        
+        let buttons = vec![
             button(text(favorite_text).color(theme_colors.text_primary).size(base_font_size).font(current_font))
                 .on_press(Message::TogglePaperFavorite(paper.id.clone()))
                 .style(favorite_style)
@@ -121,14 +158,7 @@ impl PaperCard {
                 .style(button_danger_style_dynamic(&app.settings.theme))
                 .padding([8.0 * scale, 8.0 * scale])
                 .into(),
-            button(text("Download").color(Color::BLACK).size(base_font_size).font(current_font))
-                .on_press(Message::DownloadPaper(paper.clone()))
-                .style(button_primary_style_dynamic(&app.settings.theme))
-                .padding([8.0 * scale, 8.0 * scale])
-                .into(),
-        ];
-        
-        buttons.push(
+            pdf_button.into(),
             button(text("View").color(theme_colors.text_primary).size(base_font_size).font(current_font))
                 .on_press(if let Some(index) = app.saved_papers.iter().position(|p| p.id == paper.id) {
                     Message::NewTab(TabContent::PaperView(index))
@@ -138,7 +168,7 @@ impl PaperCard {
                 .style(button_secondary_style_dynamic(&app.settings.theme))
                 .padding([8.0 * scale, 8.0 * scale])
                 .into()
-        );
+        ];
         
         row(buttons)
         .spacing(8.0 * scale)

@@ -43,6 +43,28 @@ impl ArxivManager {
                         .into()
                     }
                 }
+                TabContent::PdfViewer(path) => {
+                    // PDF查看器视图 - 需要通过路径找到对应的PDF查看器
+                    // 由于我们现在使用tab_id作为key，需要遍历找到匹配的viewer
+                    let pdf_viewer_entry = self.pdf_viewers.iter()
+                        .find(|(_, viewer)| viewer.file_path == path.to_string_lossy());
+                    
+                    if let Some((_tab_id, pdf_viewer)) = pdf_viewer_entry {
+                        pdf_viewer.view(&self.settings.theme)
+                    } else {
+                        let theme_colors = self.theme_colors();
+                        let current_font = self.current_font();
+                        let base_font_size = self.current_font_size();
+                        container(
+                            iced::widget::text("Loading PDF...")
+                                .color(theme_colors.text_muted)
+                                .size(base_font_size)
+                                .font(current_font)
+                        )
+                        .style(chat_container_dynamic_style(&self.settings.theme))
+                        .into()
+                    }
+                }
             }
         } else {
             // 美观的空白界面

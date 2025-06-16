@@ -4,6 +4,7 @@ use iced::widget::pane_grid;
 use std::path::PathBuf;
 
 use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder, ArxivCategory, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
+use crate::pdf::PdfViewerMessage;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -119,10 +120,15 @@ pub enum Message {
     // 标签页操作
     TabClicked(usize),
     TabClose(usize),
+    CloseTab(String), // 通过 ID 关闭标签页
     NewTab(crate::core::models::TabContent),
     NavigateToNextTab,
     NavigateToPreviousTab,
     CloseActiveTab, // 关闭当前活动标签页
+    // PDF查看器消息
+    PdfViewer(String, PdfViewerMessage),
+    OpenPdfFile(PathBuf),
+    OpenOrDownloadPdf(ArxivPaper), // 新增：打开PDF或下载后打开
     // 右键菜单操作
     TabRightClicked { tab_index: usize, position: iced::Point },
     HideContextMenu,

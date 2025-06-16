@@ -5,6 +5,7 @@ mod core;
 mod ui;
 mod search;
 mod utils;
+mod pdf;
 
 use core::ArxivManager;
 

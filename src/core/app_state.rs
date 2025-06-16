@@ -5,8 +5,9 @@ use std::time::Instant;
 use std::collections::HashMap;
 use iced::{Task, Subscription};
 
-use crate::core::{ArxivPaper, DownloadItem, SearchConfig, AppSettings, Tab, TabContent, SessionManager, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
+use crate::core::{ArxivPaper, DownloadItem, DownloadStatus, SearchConfig, AppSettings, Tab, TabContent, SessionManager, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
 use crate::core::messages::{Message, Command};
+use crate::pdf::{PdfViewer, PdfViewerMessage};
 
 // 导入所有处理器
 use crate::core::handlers::{
@@ -168,6 +169,8 @@ pub struct ArxivManager {
     pub window_height: f32,
     // 滚动条状态管理
     pub scrollbar_states: HashMap<String, ScrollbarState>,
+    // PDF查看器管理
+    pub pdf_viewers: HashMap<String, PdfViewer>,
 }
 
 impl ArxivManager {
@@ -261,6 +264,8 @@ impl ArxivManager {
             window_height: 900.0,
             // 滚动条状态管理初始化
             scrollbar_states: HashMap::new(),
+            // PDF查看器管理初始化
+            pdf_viewers: HashMap::new(),
         };
 
         // 确保标签页按分组排序
@@ -279,6 +284,11 @@ impl ArxivManager {
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            // PDF查看器相关消息
+            Message::PdfViewer(tab_id, pdf_msg) => self.handle_pdf_viewer_message(tab_id, pdf_msg),
+            Message::OpenPdfFile(path) => self.handle_open_pdf_file(path),
+            Message::OpenOrDownloadPdf(paper) => self.handle_open_or_download_pdf(paper),
+            
             // 标签页相关消息 - 委托给 TabHandler
             Message::TabClicked(tab_index) => self.handle_tab_clicked(tab_index),
             Message::TabClose(tab_index) => self.handle_tab_close(tab_index),
@@ -928,6 +938,176 @@ impl ArxivManager {
             .get(id)
             .map(|state| state.get_alpha())
             .unwrap_or(0.4) // 默认透明度
+    }
+    
+    // PDF查看器相关方法
+    
+    /// 处理PDF查看器消息
+    fn handle_pdf_viewer_message(&mut self, tab_id: String, pdf_msg: PdfViewerMessage) -> Task<Message> {
+        println!("Handling PDF viewer message for tab_id: {}, message: {:?}", tab_id, pdf_msg);
+        // 查找对应的PDF查看器并处理消息
+        if let Some(pdf_viewer) = self.pdf_viewers.get_mut(&tab_id) {
+            println!("Found PDF viewer for tab_id: {}", tab_id);
+            // 调用PDF查看器的update方法处理消息
+            if let Some(message) = pdf_viewer.update(pdf_msg) {
+                return Task::done(message);
+            }
+        } else {
+            println!("No PDF viewer found for tab_id: {}", tab_id);
+        }
+        
+        Task::none()
+    }
+    
+    /// 打开PDF文件
+    fn handle_open_pdf_file(&mut self, path: std::path::PathBuf) -> Task<Message> {
+        println!("Opening PDF file: {:?}", path);
+        
+        // 检查是否已经有这个PDF的标签页
+        if let Some(tab_index) = self.tabs.iter().position(|tab| {
+            matches!(&tab.content, TabContent::PdfViewer(p) if p == &path)
+        }) {
+            // 如果已存在，直接切换到该标签页
+            println!("PDF viewer already exists, switching to tab {}", tab_index);
+            self.active_tab = tab_index;
+            return Task::none();
+        }
+        
+        // 创建PDF查看器ID (使用当前的next_tab_id)
+        let pdf_id = format!("pdf_{}", self.next_tab_id);
+        println!("Creating PDF viewer with ID: {}", pdf_id);
+        
+        // 创建新的PDF查看器实例
+        let pdf_viewer = PdfViewer::new(pdf_id.clone(), path.to_string_lossy().to_string());
+        self.pdf_viewers.insert(pdf_id.clone(), pdf_viewer);
+        
+        // 创建新标签页 (这会递增 next_tab_id)
+        let content = TabContent::PdfViewer(path.clone());
+        self.handle_new_tab(content);
+        
+        // 返回打开PDF文件的消息
+        let message = Message::PdfViewer(pdf_id.clone(), PdfViewerMessage::OpenFile(path.clone()));
+        println!("Sending PDF viewer message: {:?}", message);
+        
+        Task::done(message)
+    }
+    
+    /// 处理打开或下载PDF的操作
+    fn handle_open_or_download_pdf(&mut self, paper: ArxivPaper) -> Task<Message> {
+        // 检查是否已有本地文件
+        if let Some(ref local_path) = paper.local_file_path {
+            // 如果有本地文件，直接打开
+            let pdf_path = std::path::PathBuf::from(local_path);
+            return self.handle_open_pdf_file(pdf_path);
+        } else {
+            // 如果没有本地文件，先下载再打开
+            // 检查是否已经在下载队列中
+            if self.downloads.iter().any(|d| d.paper_id == paper.id) {
+                return Task::none();
+            }
+            
+            // 添加到下载队列并设置自动打开标志
+            let download_item = DownloadItem {
+                paper_id: paper.id.clone(),
+                title: paper.title.clone(),
+                progress: 0.0,
+                status: DownloadStatus::Pending,
+                file_path: None,
+                auto_open_after_download: true, // 设置自动打开标志
+            };
+            
+            self.downloads.push(download_item);
+            
+            // 启动实际的下载任务
+            let paper_id = paper.id.clone();
+            let pdf_url = if paper.pdf_url.starts_with("http") {
+                paper.pdf_url.clone()
+            } else {
+                // 构建正确的arXiv PDF URL
+                if paper.id.contains("v") {
+                    // 如果ID已经包含版本号，直接使用
+                    format!("https://arxiv.org/pdf/{}.pdf", paper.id)
+                } else {
+                    // 如果没有版本号，添加默认版本
+                    format!("https://arxiv.org/pdf/{}v1.pdf", paper.id)
+                }
+            };
+            
+            println!("Starting download for paper: {} from {}", paper.title, pdf_url);
+            
+            // 返回异步下载任务
+            return Task::perform(
+                async move {
+                    // 这里调用异步下载函数
+                    use std::fs;
+                    use std::io::Write;
+                    
+                    // 创建下载目录
+                    let downloads_dir = std::env::current_dir()
+                        .map_err(|e| (paper_id.clone(), format!("Failed to get current directory: {}", e)))?
+                        .join("downloads");
+                    
+                    if !downloads_dir.exists() {
+                        fs::create_dir_all(&downloads_dir)
+                            .map_err(|e| (paper_id.clone(), format!("Failed to create downloads directory: {}", e)))?;
+                    }
+                    
+                    // 构建文件路径
+                    let file_name = format!("{}.pdf", paper_id);
+                    let file_path = downloads_dir.join(&file_name);
+                    
+                    // 如果文件已存在，直接返回
+                    if file_path.exists() {
+                        return Ok((paper_id, file_path));
+                    }
+                    
+                    // 下载文件
+                    println!("Downloading PDF from: {}", pdf_url);
+                    
+                    let client = reqwest::Client::builder()
+                        .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                        .timeout(std::time::Duration::from_secs(60))
+                        .build()
+                        .map_err(|e| (paper_id.clone(), format!("Failed to create HTTP client: {}", e)))?;
+                    
+                    let response = client.get(&pdf_url).send().await
+                        .map_err(|e| (paper_id.clone(), format!("Failed to download PDF: {}", e)))?;
+                    
+                    println!("HTTP response status: {}", response.status());
+                    
+                    if !response.status().is_success() {
+                        return Err((paper_id, format!("HTTP error: {} - {}", response.status(), response.status().canonical_reason().unwrap_or("Unknown error"))));
+                    }
+                    
+                    let content_length = response.content_length();
+                    println!("Content length: {:?}", content_length);
+                    
+                    let content = response.bytes().await
+                        .map_err(|e| (paper_id.clone(), format!("Failed to read response: {}", e)))?;
+                    
+                    println!("Downloaded {} bytes", content.len());
+                    
+                    // 检查是否为有效的PDF文件
+                    if content.len() < 4 || !content.starts_with(b"%PDF") {
+                        return Err((paper_id, format!("Downloaded content is not a valid PDF file (size: {} bytes)", content.len())));
+                    }
+                    
+                    // 保存文件
+                    let mut file = fs::File::create(&file_path)
+                        .map_err(|e| (paper_id.clone(), format!("Failed to create file: {}", e)))?;
+                    
+                    file.write_all(&content)
+                        .map_err(|e| (paper_id.clone(), format!("Failed to write file: {}", e)))?;
+                    
+                    println!("PDF downloaded successfully: {:?}", file_path);
+                    Ok((paper_id, file_path))
+                },
+                |result| match result {
+                    Ok((paper_id, file_path)) => Message::DownloadCompleted { paper_id, file_path },
+                    Err((paper_id, error)) => Message::DownloadFailed { paper_id, error },
+                }
+            );
+        }
     }
 }
 

@@ -97,6 +97,7 @@ impl DownloadHandler for ArxivManager {
             progress: 0.0,
             status: DownloadStatus::Pending,
             file_path: None,
+            auto_open_after_download: false,
         };
         
         self.downloads.push(download_item);
@@ -169,6 +170,13 @@ impl DownloadHandler for ArxivManager {
     }
 
     fn handle_download_completed(&mut self, paper_id: String, file_path: String) -> Task<Message> {
+        // 检查是否需要自动打开PDF
+        let should_auto_open = if let Some(download) = self.downloads.iter().find(|d| d.paper_id == paper_id) {
+            download.auto_open_after_download
+        } else {
+            false
+        };
+        
         // 更新下载状态
         if let Some(download) = self.downloads.iter_mut().find(|d| d.paper_id == paper_id) {
             download.progress = 1.0;
@@ -176,12 +184,24 @@ impl DownloadHandler for ArxivManager {
             download.file_path = Some(file_path.clone().into());
         }
         
-        // 更新论文的本地文件路径
+        // 更新论文的本地文件路径（在saved_papers和search_results中都更新）
         if let Some(paper) = self.saved_papers.iter_mut().find(|p| p.id == paper_id) {
             paper.local_file_path = Some(file_path.clone());
         }
         
+        // 同时更新search_results中的论文
+        if let Some(paper) = self.search_results.iter_mut().find(|p| p.id == paper_id) {
+            paper.local_file_path = Some(file_path.clone());
+        }
+        
         println!("Download completed: {}", file_path);
+        
+        // 如果需要自动打开，返回打开PDF的任务
+        if should_auto_open {
+            let pdf_path = std::path::PathBuf::from(&file_path);
+            return Task::done(Message::OpenPdfFile(pdf_path));
+        }
+        
         Task::none()
     }
 

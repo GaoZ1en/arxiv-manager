@@ -7,6 +7,7 @@ pub mod config;
 pub mod utils;
 pub mod ui;
 pub mod app;
+pub mod pdf;  // PDF浏览模块
 // pub mod appearance; // 暂时移除旧的appearance系统
 
 // 搜索模块
