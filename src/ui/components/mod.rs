@@ -6,8 +6,6 @@ pub mod command_palette;
 pub mod paper_card;
 pub mod waterfall;
 pub mod context_menu;
-pub mod ai_assistant_panel_simple;
-pub mod copilot_panel;  // 新增 GitHub Copilot 面板
 
 // 重新导出主要组件
 pub use tab_bar::TabBar;
@@ -16,5 +14,3 @@ pub use command_palette::CommandPalette;
 pub use paper_card::PaperCard;
 pub use waterfall::WaterfallLayout;
 pub use context_menu::{ContextMenu, ContextMenuState};
-pub use ai_assistant_panel_simple::AiAssistantPanel;
-pub use copilot_panel::CopilotPanel;

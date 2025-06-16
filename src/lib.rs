@@ -12,9 +12,6 @@ pub mod app;
 // 搜索模块
 pub mod search;
 
-// AI 助手模块
-pub mod ai;
-
 // 领域驱动设计架构
 pub mod domains;     // 领域层
 pub mod application; // 应用层

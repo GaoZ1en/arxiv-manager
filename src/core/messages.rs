@@ -4,7 +4,6 @@ use iced::widget::pane_grid;
 use std::path::PathBuf;
 
 use crate::core::models::{ArxivPaper, SearchField, DateRange, SortBy, SortOrder, ArxivCategory, LibrarySortBy, LibraryGroupBy, LibraryViewMode};
-use crate::ai::AiMessage;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -142,11 +141,6 @@ pub enum Message {
     ScrollbarHovered(String, bool), // 滚动条标识符和悬停状态
     ScrollbarDragged(String, bool), // 滚动条标识符和拖拽状态
     ScrollbarTick, // 定时检查淡出
-    
-    // AI Assistant messages
-    Ai(AiMessage),
-    ToggleAiAssistant, // Toggle AI Assistant panel visibility
-    ChangeAiPanelTab(crate::ui::components::ai_assistant_panel_simple::AiPanelTab), // Switch AI panel tabs
 }
 
 #[derive(Debug, Clone)]

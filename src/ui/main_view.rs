@@ -6,7 +6,7 @@ use iced::{Element, Length};
 use crate::core::app_state::ArxivManager;
 use crate::core::models::TabContent;
 use crate::core::messages::Message;
-use crate::ui::components::{TabBar, Sidebar, CommandPalette, AiAssistantPanel};
+use crate::ui::components::{TabBar, Sidebar, CommandPalette};
 use crate::ui::views::{SearchView, LibraryView, DownloadsView, SettingsView, PaperView};
 use crate::ui::style::{main_container_dynamic_style, chat_container_dynamic_style};
 
@@ -148,28 +148,9 @@ impl ArxivManager {
             content_area.into()
         };
 
-        // 添加 AI 助手面板
-        let base_layout: Element<Message> = if self.ai_state.is_visible {
-            row![
-                main_layout,
-                AiAssistantPanel::view(
-                    self,
-                    &self.ai_state.chat_messages,
-                    &self.ai_state.current_suggestions,
-                    self.ai_state.is_generating
-                )
-            ]
-            .spacing(0)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
-        } else {
-            main_layout
-        };
-
         // 如果命令面板或右键菜单可见，添加覆盖层 (类似IRC的快速搜索)
         if self.command_palette_visible || self.context_menu.visible {
-            let mut overlays = vec![base_layout];
+            let mut overlays = vec![main_layout];
             
             if self.command_palette_visible {
                 overlays.push(CommandPalette::view(self));
@@ -183,7 +164,7 @@ impl ArxivManager {
                 .style(main_container_dynamic_style(&self.settings.theme))
                 .into()
         } else {
-            container(base_layout)
+            container(main_layout)
                 .style(main_container_dynamic_style(&self.settings.theme))
                 .into()
         }

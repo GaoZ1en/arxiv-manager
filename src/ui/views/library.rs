@@ -504,7 +504,7 @@ impl LibraryView {
         
         let content = row![
             container("").width(indent as u16), // 缩进
-            text(icon.clone())
+            text(icon)
                 .size(base_font_size)
                 .font(current_font),
             text(collection.name.clone())
